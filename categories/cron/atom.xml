@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: cron | Ake Koomsin]]></title>
+  <link href="http://ake.in.th//categories/cron/atom.xml" rel="self"/>
+  <link href="http://ake.in.th/"/>
+  <updated>2014-10-29T18:25:53+09:00</updated>
+  <id>http://ake.in.th/</id>
+  <author>
+    <name><![CDATA[Ake Koomsin]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Using date command in cron job]]></title>
+    <link href="http://ake.in.th/2012/01/04/using-date-command-in-cron-job/"/>
+    <updated>2012-01-04T21:26:00+09:00</updated>
+    <id>http://ake.in.th/2012/01/04/using-date-command-in-cron-job</id>
+    <content type="html"><![CDATA[<p>I had to set a cron job to back up mysql database and its format I wanted is like this</p>
+
+<p><code>
+back_up_YYYY_MM_DD.sql
+</code></p>
+
+<p>And here was my first initial configuration that I added to <code>/etc/crontab</code></p>
+
+<p><code>bash
+00 11   * * *   a_user   mysqldump -u root -pSomePass db &gt; /home/a_user/www/sql_backup/back_up_`date +%Y_%d_%m`.sql
+</code></p>
+
+<p>Actually, I noticed a strange syntax color at the end of the line in Vim. I thought it is just misparsing so that I ommited it.</p>
+
+<p>And here was the output in <code>/var/log/syslog</code></p>
+
+<p><code>
+Jan  4 11:00:01 a_user CRON[3427]: (a_user) CMD (  mysqldump -u root -pSomePass db &gt; /home/a_user/www/sql_backup/back_up_`date +)
+</code></p>
+
+<p>Something was wrong as you can see; it was not complete.</p>
+
+<p>In order to fix this, I had to escape the &lsquo;%&rsquo; sign</p>
+
+<p><code>bash
+00 11   * * *   a_user   mysqldump -u root -pSomePass db &gt; /home/gizmo/www/sql_backup/back_up_`date +\%Y_\%d_\%m`.sql
+</code></p>
+
+<p>Now, everything works fine :D</p>
+]]></content>
+  </entry>
+  
+</feed>

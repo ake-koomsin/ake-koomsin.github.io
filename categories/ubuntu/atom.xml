@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: ubuntu | Ake Koomsin]]></title>
+  <link href="http://ake.in.th//categories/ubuntu/atom.xml" rel="self"/>
+  <link href="http://ake.in.th/"/>
+  <updated>2014-10-29T18:25:53+09:00</updated>
+  <id>http://ake.in.th/</id>
+  <author>
+    <name><![CDATA[Ake Koomsin]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Getting Zyxel NWD-270N works on Ubuntu 10.04 LTS]]></title>
+    <link href="http://ake.in.th/2012/01/02/getting-zyxel-nwd-270n-works-on-ubuntu-10-dot-04-lts/"/>
+    <updated>2012-01-02T01:36:00+09:00</updated>
+    <id>http://ake.in.th/2012/01/02/getting-zyxel-nwd-270n-works-on-ubuntu-10-dot-04-lts</id>
+    <content type="html"><![CDATA[<p>I have to install Ubuntu 10.04 LTS on a machine as a sales terminal which will run Ruby on Rails. The problem that I encounter is Zyxel NWD-270N, a wireless adaptor. At the first glance, it looks like it should work out of box. Zyxel NWD-270N supposes to use rt2870sta driver.</p>
+
+<p>Unfortunately, there seems to be something wrong with Ubuntu 10.04 LTS that tries to load rt2800usb and it does not work. So, I google and find this <a href="http://ubuntuforums.org/showthread.php?t=1419504&amp;page=6">link</a></p>
+
+<p>Noting that I haven&rsquo;t updated the Ubuntu after install yet.</p>
+
+<p>Since this thread is about Asus USB-N13, I have to find my vendor and product ID first by run:</p>
+
+<p><code>bash
+lsusb
+</code></p>
+
+<p>And here is the partial result:</p>
+
+<p><code>
+...
+Bus 002 Device 003: ID 0586:341a Zyxel Communications Corp.
+...
+</code></p>
+
+<p>The next step is to tell the OS that it should use rt2870sta driver when it sees this vendor and product ID. There are two files that I have to create</p>
+
+<p>The first one is /etc/udev/rules.d/network_drivers.rules</p>
+
+<p><code>bash
+sudo vim /etc/udev/rules.d/network_drivers.rules
+</code></p>
+
+<p>and add this line:</p>
+
+<p><code>
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0586", ATTR{idProduct}=="341a", RUN+="/sbin/modprobe -qba rt2870sta"
+</code></p>
+
+<p>The second one is /etc/modprobe.d/network_drivers.conf</p>
+
+<p><code>bash
+sudo vim /etc/modprobe.d/network_drivers.conf
+</code></p>
+
+<p>and add this line:</p>
+
+<p><code>
+install rt2870sta /sbin/modprobe --ignore-install rt2870sta $CMDLINE_OPTS; /bin/echo "0586 341a" &gt; /sys/bus/usb/drivers/rt2870/new_id
+</code></p>
+
+<p>After restart, it seems to be able to find wireless access points but it is not able to connect. Therefore, I decide to find an old wireless adaptor as a temporary adaptor in order to connect to the Internet to run update:</p>
+
+<p><code>bash
+sudo aptitude update
+sudo aptitude upgrade
+</code></p>
+
+<p>And also install (I don&rsquo;t know if it is necessary after reading the package description &ldquo;This empty package allows people to keep their backported wireless modules up-to-date when upgrading their Linux kernel.&rdquo; I install it anyway)</p>
+
+<p><code>bash
+sudo aptitude install linux-backports-modules-wireless-lucid-generic
+</code></p>
+
+<p>After restart again, it works! However, it doesn&rsquo;t seems to run on wireless N, only at 54 Mbps. Anyway it works and I can continue my work.</p>
+]]></content>
+  </entry>
+  
+</feed>

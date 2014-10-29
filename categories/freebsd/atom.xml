@@ -1,0 +1,411 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: freebsd | Ake Koomsin]]></title>
+  <link href="http://ake.in.th//categories/freebsd/atom.xml" rel="self"/>
+  <link href="http://ake.in.th/"/>
+  <updated>2014-10-29T18:25:53+09:00</updated>
+  <id>http://ake.in.th/</id>
+  <author>
+    <name><![CDATA[Ake Koomsin]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Digging Around FreeBSD Socket API TCP Send Path]]></title>
+    <link href="http://ake.in.th/2014/07/04/digging-around-freebsd-socket-api-tcp-send-path/"/>
+    <updated>2014-07-04T00:08:26+09:00</updated>
+    <id>http://ake.in.th/2014/07/04/digging-around-freebsd-socket-api-tcp-send-path</id>
+    <content type="html"><![CDATA[<p>When we want to send data across network, it involves either</p>
+
+<ul>
+<li><code>write()/writev()</code></li>
+<li><code>send()/sendto()/sendmsg()</code></li>
+</ul>
+
+
+<p>and sockets.</p>
+
+<p>To use <code>write()</code>, <code>writev()</code> and <code>send()</code>, the socket must be connected. On the other hand <code>sendto()</code> and <code>sendmsg()</code> can be used in both connected and unconnected connection.</p>
+
+<p>We normally can find the implementation of system calls in the kernel by adding ‘sys_’ prefix to the name of the system call except <code>send()</code>. In FreeBSD libc, <code>send()</code> is just a wrapper of <code>sendto()</code> with some default parameters.</p>
+
+<p>Let’s take a look at <code>sys_write()</code>.</p>
+
+<p>``` c In sys/kern/sys_generic.c
+int
+sys_write(td, uap)</p>
+
+<pre><code>struct thread *td;
+struct write_args *uap;
+</code></pre>
+
+<p>{</p>
+
+<pre><code>struct uio auio;
+struct iovec aiov;
+int error;
+
+if (uap-&gt;nbyte &gt; IOSIZE_MAX)
+    return (EINVAL);
+aiov.iov_base = (void *)(uintptr_t)uap-&gt;buf;
+aiov.iov_len = uap-&gt;nbyte;
+auio.uio_iov = &amp;aiov;
+auio.uio_iovcnt = 1;
+auio.uio_resid = uap-&gt;nbyte;
+auio.uio_segflg = UIO_USERSPACE;
+error = kern_writev(td, uap-&gt;fd, &amp;auio);
+return(error);
+</code></pre>
+
+<p>}
+```</p>
+
+<p>It is just a special form of <code>writev()</code> as it calls <code>kern_writev()</code> eventually. Taking a look at <code>kern_writev()</code> gives us some interesting code pattern.</p>
+
+<p>``` c In sys/kern/sys_generic.c
+int
+kern_writev(struct thread <em>td, int fd, struct uio </em>auio)
+{</p>
+
+<pre><code>struct file *fp;
+cap_rights_t rights;
+int error;
+
+error = fget_write(td, fd, cap_rights_init(&amp;rights, CAP_WRITE), &amp;fp);
+if (error)
+    return (error);
+error = dofilewrite(td, fd, fp, auio, (off_t)-1, 0);
+fdrop(fp, td);
+return (error);
+</code></pre>
+
+<p>}
+```</p>
+
+<p><code>fget_write()</code> is called to verify that we have permission to perform write operation and get a pointer to the file associated with the file descriptor. After thus function call, the reference count of the file is increased. That is why in the end <code>fdrop()</code> macro is called to decrease the reference count and perform some cleanup if necessary.</p>
+
+<p>The write operation happens when <code>dofilewrite()</code> is called.</p>
+
+<p>``` c In sys/kern/sys_generic.c
+static int
+dofilewrite(td, fd, fp, auio, offset, flags)</p>
+
+<pre><code>struct thread *td;
+int fd;
+struct file *fp;
+struct uio *auio;
+off_t offset;
+int flags;
+</code></pre>
+
+<p>{</p>
+
+<pre><code>  ...
+if ((error = fo_write(fp, auio, td-&gt;td_ucred, flags, td))) {
+    ...
+}
+  ...
+</code></pre>
+
+<p>}
+```</p>
+
+<p><code>dofilewrite()</code> performs some verification and dispatches write operating to an appropriate function by calling <code>fo_write()</code>. The real write function depends on the type of the file.</p>
+
+<p>``` c In sys/sys/file.h
+static __inline int
+fo_write(struct file <em>fp, struct uio </em>uio, struct ucred *active_cred,</p>
+
+<pre><code>int flags, struct thread *td)
+</code></pre>
+
+<p>{</p>
+
+<pre><code>return ((*fp-&gt;f_ops-&gt;fo_write)(fp, uio, active_cred, flags, td));
+</code></pre>
+
+<p>}
+```</p>
+
+<p>For socket, file operations are defined as follows.</p>
+
+<p>``` c In sys/kern/sys_socket.c
+struct fileops    socketops = {</p>
+
+<pre><code>.fo_read = soo_read,
+.fo_write = soo_write,
+.fo_truncate = soo_truncate,
+.fo_ioctl = soo_ioctl,
+.fo_poll = soo_poll,
+.fo_kqfilter = soo_kqfilter,
+.fo_stat = soo_stat,
+.fo_close = soo_close,
+.fo_chmod = invfo_chmod,
+.fo_chown = invfo_chown,
+.fo_sendfile = invfo_sendfile,
+.fo_flags = DFLAG_PASSABLE
+</code></pre>
+
+<p>};
+```</p>
+
+<p>That means the actual write function is <code>soo_write()</code>.</p>
+
+<p>``` c In sys/kern/sys_socket.c
+int
+soo_write(struct file <em>fp, struct uio </em>uio, struct ucred *active_cred,</p>
+
+<pre><code>int flags, struct thread *td)
+</code></pre>
+
+<p>{</p>
+
+<pre><code>struct socket *so = fp-&gt;f_data;
+int error;
+</code></pre>
+
+<h1>ifdef MAC</h1>
+
+<pre><code>error = mac_socket_check_send(active_cred, so);
+if (error)
+    return (error);
+</code></pre>
+
+<h1>endif</h1>
+
+<pre><code>error = sosend(so, 0, uio, 0, 0, 0, uio-&gt;uio_td);
+if (error == EPIPE &amp;&amp; (so-&gt;so_options &amp; SO_NOSIGPIPE) == 0) {
+    PROC_LOCK(uio-&gt;uio_td-&gt;td_proc);
+    tdsignal(uio-&gt;uio_td, SIGPIPE);
+    PROC_UNLOCK(uio-&gt;uio_td-&gt;td_proc);
+}
+return (error);
+</code></pre>
+
+<p>}
+```</p>
+
+<p>Again, <code>soo_write()</code> performs some necessary verification and calls <code>sosend()</code>.</p>
+
+<p>Before we go further, let’s take a look at <code>sys_sendt()</code> to see how it differs from normal <code>write()</code> system call.</p>
+
+<p>``` c In sys/kern/uipc_syscalls.c
+int
+sys_sendto(td, uap)</p>
+
+<pre><code>struct thread *td;
+struct sendto_args /* {
+    int s;
+    caddr_t buf;
+    size_t  len;
+    int flags;
+    caddr_t to;
+    int tolen;
+} */ *uap;
+</code></pre>
+
+<p>{</p>
+
+<pre><code>struct msghdr msg;
+struct iovec aiov;
+
+msg.msg_name = uap-&gt;to;
+msg.msg_namelen = uap-&gt;tolen;
+msg.msg_iov = &amp;aiov;
+msg.msg_iovlen = 1;
+msg.msg_control = 0;
+</code></pre>
+
+<h1>ifdef COMPAT_OLDSOCK</h1>
+
+<pre><code>msg.msg_flags = 0;
+</code></pre>
+
+<h1>endif</h1>
+
+<pre><code>aiov.iov_base = uap-&gt;buf;
+aiov.iov_len = uap-&gt;len;
+return (sendit(td, uap-&gt;s, &amp;msg, uap-&gt;flags));
+</code></pre>
+
+<p>}
+```</p>
+
+<p><code>sys_sendmsg()</code> is similar to <code>sys_sendto()</code>. They just handle the arguments differently. They both call <code>sendit()</code> at the end. <code>sendit()</code> performs some check and call <code>kern_sendit()</code> which call <code>sosend()</code> eventually.</p>
+
+<p>``` c In sys/kern/uipc_syscalls.c
+static int
+sendit(td, s, mp, flags)</p>
+
+<pre><code>struct thread *td;
+int s;
+struct msghdr *mp;
+int flags;
+</code></pre>
+
+<p>{</p>
+
+<pre><code>...
+error = kern_sendit(td, s, mp, flags, control, UIO_USERSPACE);
+...
+</code></pre>
+
+<p>}</p>
+
+<p>int
+kern_sendit(td, s, mp, flags, control, segflg)</p>
+
+<pre><code>struct thread *td;
+int s;
+struct msghdr *mp;
+int flags;
+struct mbuf *control;
+enum uio_seg segflg;
+</code></pre>
+
+<p>{</p>
+
+<pre><code>...
+error = sosend(so, mp-&gt;msg_name, &amp;auio, 0, control, flags, td);
+...
+</code></pre>
+
+<p>}
+```</p>
+
+<p><code>sosend()</code> is a basically a wrapper of the function pointed by <code>pru_sosend</code>.</p>
+
+<p>``` c In sys/kern/uipc_socket.c
+int
+sosend(struct socket <em>so, struct sockaddr </em>addr, struct uio *uio,</p>
+
+<pre><code>struct mbuf *top, struct mbuf *control, int flags, struct thread *td)
+</code></pre>
+
+<p>{</p>
+
+<pre><code>int error;
+
+CURVNET_SET(so-&gt;so_vnet);
+error = so-&gt;so_proto-&gt;pr_usrreqs-&gt;pru_sosend(so, addr, uio, top,
+    control, flags, td);
+CURVNET_RESTORE();
+return (error);
+</code></pre>
+
+<p>}
+```</p>
+
+<p>At this point, the actual function depends on the protocol type. In case of TCP, the <code>pru_sosend</code> points to <code>sosend_generic()</code> (This is the default value. UDP has its own <code>sosend_dgram()</code>).</p>
+
+<p>``` c In sys/kern/uipc_generic.c
+int
+sosend_generic(struct socket <em>so, struct sockaddr </em>addr, struct uio *uio,</p>
+
+<pre><code>struct mbuf *top, struct mbuf *control, int flags, struct thread *td)
+</code></pre>
+
+<p>{</p>
+
+<pre><code>long space;
+ssize_t resid;
+int clen = 0, error, dontroute;
+int atomic = sosendallatonce(so) || top;
+
+...
+        /*
+         * XXX all the SBS_CANTSENDMORE checks previously
+         * done could be out of date.  We could have recieved
+         * a reset packet in an interrupt or maybe we slept
+         * while doing page faults in uiomove() etc.  We
+         * could probably recheck again inside the locking
+         * protection here, but there are probably other
+         * places that this also happens.  We must rethink
+         * this.
+         */
+        VNET_SO_ASSERT(so);
+        error = (*so-&gt;so_proto-&gt;pr_usrreqs-&gt;pru_send)(so,
+            (flags &amp; MSG_OOB) ? PRUS_OOB :
+ ...
+</code></pre>
+
+<p>}
+```</p>
+
+<p>At some point in <code>sosend_generic()</code>, <code>pru_send</code> function pointer is called. For TCP, this points to function <code>tcp_user_send()</code>.</p>
+
+<p>``` c In sys/netinet/tcp_usrreq.c
+static int
+tcp_usr_send(struct socket <em>so, int flags, struct mbuf </em>m,</p>
+
+<pre><code>struct sockaddr *nam, struct mbuf *control, struct thread *td)
+</code></pre>
+
+<p>{</p>
+
+<pre><code>...
+    tp-&gt;snd_up = tp-&gt;snd_una + so-&gt;so_snd.sb_cc;
+    tp-&gt;t_flags |= TF_FORCEDATA;
+    error = tcp_output(tp);
+    tp-&gt;t_flags &amp;= ~TF_FORCEDATA;
+}
+...
+</code></pre>
+
+<p>}
+```</p>
+
+<p>The data is passed to <code>tcp_output()</code> to figure out what to be sent and send it to lower layer by <code>ip_output()</code>.</p>
+
+<p>``` c In sys/netinet/tcp_output.c
+int
+tcp_output(struct tcpcb *tp)
+{</p>
+
+<pre><code>...
+    TCP_PROBE5(send, NULL, tp, ip, tp, th);
+
+    error = ip_output(m, tp-&gt;t_inpcb-&gt;inp_options, &amp;ro,
+        ((so-&gt;so_options &amp; SO_DONTROUTE) ? IP_ROUTETOIF : 0), 0,
+        tp-&gt;t_inpcb);
+...
+</code></pre>
+
+<p>}
+```</p>
+
+<p>Eventually, the data in mbuf will be passed to the device driver through <code>ifp-&gt;if_output</code> function pointer.</p>
+
+<p>``` c In sys/netinet/ip_output.c
+int
+ip_output(struct mbuf <em>m, struct mbuf </em>opt, struct route *ro, int flags,</p>
+
+<pre><code>struct ip_moptions *imo, struct inpcb *inp)
+</code></pre>
+
+<p>{</p>
+
+<pre><code>...
+    /*
+     * Reset layer specific mbuf flags
+     * to avoid confusing lower layers.
+     */
+    m_clrprotoflags(m);
+    IP_PROBE(send, NULL, NULL, ip, ifp, ip, NULL);
+    error = (*ifp-&gt;if_output)(ifp, m,
+        (const struct sockaddr *)gw, ro);
+    goto done;
+...
+</code></pre>
+
+<p>}
+```</p>
+
+<p>In conclusion, sending data across network is not a trivial task. The data from user application will pass through a series of layers. Each layer has its own responsibility.</p>
+]]></content>
+  </entry>
+  
+</feed>

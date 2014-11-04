@@ -5,12 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Using Date Command in Cron Job - Ake Koomsin</title>
+  <title>Verifing OpenBSD Install Media on OS X - Ake Koomsin</title>
   <meta name="author" content="Ake Koomsin">
 
   
-  <meta name="description" content="I had to set a cron job to back up mysql database and its format I wanted is like this 1
-back_up_YYYY_MM_DD.sql And here was my first initial &hellip;">
+  <meta name="description" content="New OpenBSD 5.6 has been released. It is time to give it a try. In the installation maunal, There is a section &ldquo;Verifying the OpenBSD &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -19,7 +18,7 @@ back_up_YYYY_MM_DD.sql And here was my first initial &hellip;">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://ake.in.th/2012/01/04/using-date-command-in-cron-job">
+  <link rel="canonical" href="http://ake.in.th/2014/11/04/verify-openbsd-install-media-from-os-x">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="Ake Koomsin" type="application/atom+xml">
@@ -69,7 +68,7 @@ back_up_YYYY_MM_DD.sql And here was my first initial &hellip;">
   <header>
     
       
-        <h1 class="entry-title">Using Date Command in Cron Job</h1>
+        <h1 class="entry-title">Verifing OpenBSD Install Media on OS X</h1>
       
     
     
@@ -86,45 +85,61 @@ back_up_YYYY_MM_DD.sql And here was my first initial &hellip;">
   
 
 
-<time datetime="2012-01-04T21:26:00+09:00" pubdate data-updated="true">Jan 4<span>th</span>, 2012</time>
+<time datetime="2014-11-04T20:07:13+09:00" pubdate data-updated="true">Nov 4<span>th</span>, 2014</time>
         
       </p>
     
   </header>
 
 
-<div class="entry-content"><p>I had to set a cron job to back up mysql database and its format I wanted is like this</p>
+<div class="entry-content"><p>New <a href="http://www.openbsd.org/56.html">OpenBSD 5.6</a> has been released. It is time to give it a try.</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>back_up_YYYY_MM_DD.sql</span></code></pre></td></tr></table></div></figure>
+<p>In the installation maunal, There is a section &ldquo;Verifying the OpenBSD Installation Media&rdquo;. <code>signify</code> command is used for verification.</p>
 
-
-<p>And here was my first initial configuration that I added to <code>/etc/crontab</code></p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'>00 11   * * *   a_user   mysqldump -u root -pSomePass db &gt; /home/a_user/www/sql_backup/back_up_<span class="sb">`</span>date +%Y_%d_%m<span class="sb">`</span>.sql
+<figure class='code'><figcaption><span>Verifying the install media</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>signify -C -p /etc/signify/openbsd-56-base.pub -x SHA256.sig cd56.iso
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>Actually, I noticed a strange syntax color at the end of the line in Vim. I thought it is just misparsing so that I ommited it.</p>
+<p>The <code>SHA256.sig</code> and <code>cd56.iso</code> can be obtained from the mirror. However, <code>openbsd-56-base.pub</code> file is not available. In addition, there is no <code>signify</code> in default OS X installation.</p>
 
-<p>And here was the output in <code>/var/log/syslog</code></p>
+<p>To use <code>signify</code> to verify the install media, we can do the following:</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'>Jan  4 11:00:01 a_user CRON<span class="o">[</span>3427<span class="o">]</span>: <span class="o">(</span>a_user<span class="o">)</span> CMD <span class="o">(</span>  mysqldump -u root -pSomePass db &gt; /home/a_user/www/sql_backup/back_up_<span class="sb">`</span>date +<span class="o">)</span>
+<p>1) Install <code>signify</code> from either <code>port</code> or <code>homebrew</code>.</p>
+
+<figure class='code'><figcaption><span>Install signify from homebrew</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>brew install signify-osx
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>Something was wrong as you can see; it was not complete.</p>
+<p></p>
 
-<p>In order to fix this, I had to escape the &lsquo;%&rsquo; sign</p>
+<p>2) Copy the public key from <a href="http://www.openbsd.org/56.html">http://www.openbsd.org/56.html</a> and create a file to store the key. It is required that the file must start with &ldquo;untrusted comment: &rdquo;.</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'>00 11   * * *   a_user   mysqldump -u root -pSomePass db &gt; /home/gizmo/www/sql_backup/back_up_<span class="sb">`</span>date +<span class="se">\%</span>Y_<span class="se">\%</span>d_<span class="se">\%</span>m<span class="sb">`</span>.sql
+<figure class='code'><figcaption><span>56.pub</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>untrusted comment: signify public key for OpenBSD 5.6
+</span><span class='line'>RWR0EANmo9nqhpPbPUZDIBcRtrVcRwQxZ8UKGWY8Ui4RHi229KFL84wV
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>Now, everything works fine :D</p>
+<p>3) Verify. In my case, I verify the <code>install56.fs</code> which is for creating bootable USB. In my case, every file is in the same directory.</p>
+
+<figure class='code'><figcaption><span>Verify</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>signify -C -p 56.pub -x SHA256.sig install56.fs
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The final result should look like this.</p>
+
+<figure class='code'><figcaption><span>Final result</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>Signature Verified
+</span><span class='line'>install56.fs: OK
+</span></code></pre></td></tr></table></div></figure>
+
+
+
 </div>
 
 
@@ -147,21 +162,15 @@ back_up_YYYY_MM_DD.sql And here was my first initial &hellip;">
   
 
 
-<time datetime="2012-01-04T21:26:00+09:00" pubdate data-updated="true">Jan 4<span>th</span>, 2012</time>
+<time datetime="2014-11-04T20:07:13+09:00" pubdate data-updated="true">Nov 4<span>th</span>, 2014</time>
       
-
-<span class="categories">
-  
-    <a class='category' href='//categories/cron/'>cron</a>, <a class='category' href='//categories/date-command/'>date_command</a>
-  
-</span>
 
 
     </p>
     
       <div class="sharing">
   
-  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://ake.in.th/2012/01/04/using-date-command-in-cron-job/" data-via="" data-counturl="http://ake.in.th/2012/01/04/using-date-command-in-cron-job/" >Tweet</a>
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://ake.in.th/2014/11/04/verify-openbsd-install-media-from-os-x/" data-via="" data-counturl="http://ake.in.th/2014/11/04/verify-openbsd-install-media-from-os-x/" >Tweet</a>
   
   
   
@@ -170,10 +179,8 @@ back_up_YYYY_MM_DD.sql And here was my first initial &hellip;">
     
     <p class="meta">
       
-        <a class="basic-alignment left" href="/2012/01/02/getting-zyxel-nwd-270n-works-on-ubuntu-10-dot-04-lts/" title="Previous Post: Getting Zyxel NWD-270N works on Ubuntu 10.04 LTS">&laquo; Getting Zyxel NWD-270N works on Ubuntu 10.04 LTS</a>
+        <a class="basic-alignment left" href="/2014/07/04/digging-around-freebsd-socket-api-tcp-send-path/" title="Previous Post: Digging Around FreeBSD Socket API TCP Send Path">&laquo; Digging Around FreeBSD Socket API TCP Send Path</a>
       
-      
-        <a class="basic-alignment right" href="/2012/01/21/install-outguess-on-os-x-lion-with-homebrew/" title="Next Post: Install outguess on OS X Lion with homebrew">Install outguess on OS X Lion with homebrew &raquo;</a>
       
     </p>
   </footer>

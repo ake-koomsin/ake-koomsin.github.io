@@ -4,7 +4,7 @@
   <title><![CDATA[Ake Koomsin]]></title>
   <link href="http://ake.in.th/atom.xml" rel="self"/>
   <link href="http://ake.in.th/"/>
-  <updated>2014-10-29T18:48:59+09:00</updated>
+  <updated>2014-11-04T20:39:08+09:00</updated>
   <id>http://ake.in.th/</id>
   <author>
     <name><![CDATA[Ake Koomsin]]></name>
@@ -12,6 +12,62 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Verifing OpenBSD Install Media on OS X]]></title>
+    <link href="http://ake.in.th/2014/11/04/verify-openbsd-install-media-from-os-x/"/>
+    <updated>2014-11-04T20:07:13+09:00</updated>
+    <id>http://ake.in.th/2014/11/04/verify-openbsd-install-media-from-os-x</id>
+    <content type="html"><![CDATA[<p>New <a href="http://www.openbsd.org/56.html">OpenBSD 5.6</a> has been released. It is time to give it a try.</p>
+
+<p>In the installation maunal, There is a section &ldquo;Verifying the OpenBSD Installation Media&rdquo;. <code>signify</code> command is used for verification.</p>
+
+<figure class='code'><figcaption><span>Verifying the install media</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>signify -C -p /etc/signify/openbsd-56-base.pub -x SHA256.sig cd56.iso
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>SHA256.sig</code> and <code>cd56.iso</code> can be obtained from the mirror. However, <code>openbsd-56-base.pub</code> file is not available. In addition, there is no <code>signify</code> in default OS X installation.</p>
+
+<p>To use <code>signify</code> to verify the install media, we can do the following:</p>
+
+<p>1) Install <code>signify</code> from either <code>port</code> or <code>homebrew</code>.</p>
+
+<figure class='code'><figcaption><span>Install signify from homebrew</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>brew install signify-osx
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p></p>
+
+<p>2) Copy the public key from <a href="http://www.openbsd.org/56.html">http://www.openbsd.org/56.html</a> and create a file to store the key. It is required that the file must start with &ldquo;untrusted comment: &rdquo;.</p>
+
+<figure class='code'><figcaption><span>56.pub</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>untrusted comment: signify public key for OpenBSD 5.6
+</span><span class='line'>RWR0EANmo9nqhpPbPUZDIBcRtrVcRwQxZ8UKGWY8Ui4RHi229KFL84wV
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>3) Verify. In my case, I verify the <code>install56.fs</code> which is for creating bootable USB. In my case, every file is in the same directory.</p>
+
+<figure class='code'><figcaption><span>Verify</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>signify -C -p 56.pub -x SHA256.sig install56.fs
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The final result should look like this.</p>
+
+<figure class='code'><figcaption><span>Final result</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>Signature Verified
+</span><span class='line'>install56.fs: OK
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Digging Around FreeBSD Socket API TCP Send Path]]></title>

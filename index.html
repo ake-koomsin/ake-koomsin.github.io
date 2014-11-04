@@ -9,8 +9,7 @@
   <meta name="author" content="Ake Koomsin">
 
   
-  <meta name="description" content="When we want to send data across network, it involves either write()/writev()
-send()/sendto()/sendmsg() and sockets. To use write(), writev() and &hellip;">
+  <meta name="description" content="New OpenBSD 5.6 has been released. It is time to give it a try. In the installation maunal, There is a section &ldquo;Verifying the OpenBSD &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -65,6 +64,91 @@ send()/sendto()/sendmsg() and sockets. To use write(), writev() and &hellip;">
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <!-- Now we're back to normal posts. Note the links used under href in both headers.-->
+      <h1 class="entry-title"><a href="/2014/11/04/verify-openbsd-install-media-from-os-x/">Verifing OpenBSD Install Media on OS X</a></h1>
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-11-04T20:07:13+09:00" pubdate data-updated="true">Nov 4<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>New <a href="http://www.openbsd.org/56.html">OpenBSD 5.6</a> has been released. It is time to give it a try.</p>
+
+<p>In the installation maunal, There is a section &ldquo;Verifying the OpenBSD Installation Media&rdquo;. <code>signify</code> command is used for verification.</p>
+
+<figure class='code'><figcaption><span>Verifying the install media</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>signify -C -p /etc/signify/openbsd-56-base.pub -x SHA256.sig cd56.iso
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>SHA256.sig</code> and <code>cd56.iso</code> can be obtained from the mirror. However, <code>openbsd-56-base.pub</code> file is not available. In addition, there is no <code>signify</code> in default OS X installation.</p>
+
+<p>To use <code>signify</code> to verify the install media, we can do the following:</p>
+
+<p>1) Install <code>signify</code> from either <code>port</code> or <code>homebrew</code>.</p>
+
+<figure class='code'><figcaption><span>Install signify from homebrew</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>brew install signify-osx
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p></p>
+
+<p>2) Copy the public key from <a href="http://www.openbsd.org/56.html">http://www.openbsd.org/56.html</a> and create a file to store the key. It is required that the file must start with &ldquo;untrusted comment: &rdquo;.</p>
+
+<figure class='code'><figcaption><span>56.pub</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>untrusted comment: signify public key for OpenBSD 5.6
+</span><span class='line'>RWR0EANmo9nqhpPbPUZDIBcRtrVcRwQxZ8UKGWY8Ui4RHi229KFL84wV
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>3) Verify. In my case, I verify the <code>install56.fs</code> which is for creating bootable USB. In my case, every file is in the same directory.</p>
+
+<figure class='code'><figcaption><span>Verify</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>signify -C -p 56.pub -x SHA256.sig install56.fs
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The final result should look like this.</p>
+
+<figure class='code'><figcaption><span>Final result</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>Signature Verified
+</span><span class='line'>install56.fs: OK
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -977,168 +1061,6 @@ send()/sendto()/sendmsg() and sockets. To use write(), writev() and &hellip;">
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <!-- Now we're back to normal posts. Note the links used under href in both headers.-->
-      <h1 class="entry-title"><a href="/2012/11/17/my-first-kernel-extension-for-logitech-presenter-device/">My First Kernel Extension for Logitech Presenter Device</a></h1>
-      
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2012-11-17T14:36:00+09:00" pubdate data-updated="true">Nov 17<span>th</span>, 2012</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>I do a lot of presentation particularly those class projects. To make my presentation looks more professional, I decide to buy <a href="http://www.logitech.com/en-us/mice-pointers/presenter/professional-presenter-r800">Logitech Professional Presenter R800</a>. It is very nice. I recommend you to have one if you have to give a lot of presentation.</p>
-
-<p>However, what bothers me is that not all buttons work with Apple Keynote, particularly Play button and Blank button. Well, the device is designed for Microsoft PowerPoint on Windows.</p>
-
-<p>The questions are why it doesn&rsquo;t work and how to make it works with Keynote?</p>
-
-<h2>How does the device work?</h2>
-
-<p>Actually, that device is merely a wireless keyboard with only 4 keys including, Page Up, Page Down, F5 and . (dot). Page Up key and Page Down key are for moving slides back and forth. F5 is for starting a presentation. Dot key is for blanking.</p>
-
-<p>PowerPoint conforms to all those keys but Keynote doesn&rsquo;t. Keynote uses, by default, CMD + ALT + P to start playing a slide and B for blanking the slide. Dot key for Keynote is for terminating the slideshow which may or may not what you want.</p>
-
-<h2>What normal people would do</h2>
-
-<p>The simple and sane way is to modify the shortcut key. You can go to System Preference > Keyboard > Keyboard Shortcuts > Application Shortcuts, add Keynote application and overide Play Slideshow to use F5. However, This approach doesn&rsquo;t work if you want to modify the Blank key.</p>
-
-<p>You can ignore Blank key actually if you want it to stop playing the slide but I want to blank the screen. To me, stop playing to the slide means the presentation is end and I will be at the computer to stop the slideshow manually.</p>
-
-<h2>What I actually do</h2>
-
-<p>To satify my geek spirit, I write my own kernel extension for the device.</p>
-
-<p>The first question is where should I start? The answer is <code>ioreg</code>. I know that the device is a keyboard. Keyboard is a kind of Human Interface Device (HID). Apple Keyboard is also a keyboard. Therefore, I should take a look at driver which is used with Apple Keyboard.</p>
-
-<p>Before I go, I should mention a little bit about IOKit Framework first. IOKit Framework is a framework that Apple provides to developers for writing a device driver in an OOP way wtih C++.</p>
-
-<p>The belowing snippet shows the partial output from <code>ioreg</code>:</p>
-
-<figure class='code'><figcaption><span>ioreg output</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'>...
-</span><span class='line'>| |   |   +-o Apple Internal Keyboard / Trackpad@4600000  &lt;class IOUSBDevice, id 0x100000292, registered, matched, active, busy 0 (1173 ms), r$
-</span><span class='line'>    | |   |     +-o IOUSBCompositeDriver  &lt;class IOUSBCompositeDriver, id 0x100000295, !registered, !matched, active, busy 0, retain 4&gt;
-</span><span class='line'>    | |   |     +-o Apple Internal Keyboard@0  &lt;class IOUSBInterface, id 0x100000296, registered, matched, active, busy 0 (213 ms), retain 9&gt;
-</span><span class='line'>    | |   |     | +-o AppleUSBTCKeyboard  &lt;class AppleUSBTCKeyboard, id 0x10000029a, registered, matched, active, busy 0 (33 ms), retain 12&gt;
-</span><span class='line'>    | |   |     |   +-o IOHIDInterface  &lt;class IOHIDInterface, id 0x10000029f, registered, matched, active, busy 0 (31 ms), retain 7&gt;
-</span><span class='line'>    | |   |     |   | +-o AppleEmbeddedKeyboard  &lt;class AppleEmbeddedKeyboard, id 0x1000002a0, registered, matched, active, busy 0 (0 ms), retain $
-</span><span class='line'>    | |   |     |   |   +-o IOHIDKeyboard  &lt;class IOHIDKeyboard, id 0x1000002a2, registered, matched, active, busy 0 (0 ms), retain 8&gt;
-</span><span class='line'>    | |   |     |   |   | +-o IOHIDSystem  &lt;class IOHIDSystem, id 0x1000002ac, registered, matched, active, busy 0 (0 ms), retain 20&gt;
-</span><span class='line'>    | |   |     |   |   |   +-o IOHIDStackShotUserClient  &lt;class IOHIDStackShotUserClient, id 0x10000035d, !registered, !matched, active, busy 0, $
-</span><span class='line'>    | |   |     |   |   |   +-o IOHIDUserClient  &lt;class IOHIDUserClient, id 0x100000371, !registered, !matched, active, busy 0, retain 5&gt;
-</span><span class='line'>    | |   |     |   |   |   +-o IOHIDParamUserClient  &lt;class IOHIDParamUserClient, id 0x100000385, !registered, !matched, active, busy 0, retain 5$
-</span><span class='line'>    | |   |     |   |   |   +-o IOHIDEventSystemUserClient  &lt;class IOHIDEventSystemUserClient, id 0x1000003c1, !registered, !matched, active, busy$
-</span><span class='line'>    | |   |     |   |   |   +-o IOHIDEventSystemUserClient  &lt;class IOHIDEventSystemUserClient, id 0x1000003c9, !registered, !matched, active, busy$
-</span><span class='line'>    | |   |     |   |   +-o IOHIDConsumer  &lt;class IOHIDConsumer, id 0x1000002a3, registered, matched, active, busy 0 (0 ms), retain 8&gt;
-</span><span class='line'>    | |   |     |   |   | +-o IOHIDSystem  &lt;class IOHIDSystem, id 0x1000002ac, registered, matched, active, busy 0 (0 ms), retain 20&gt;
-</span><span class='line'>    | |   |     |   |   |   +-o IOHIDStackShotUserClient  &lt;class IOHIDStackShotUserClient, id 0x10000035d, !registered, !matched, active, busy 0, $
-</span><span class='line'>    | |   |     |   |   |   +-o IOHIDUserClient  &lt;class IOHIDUserClient, id 0x100000371, !registered, !matched, active, busy 0, retain 5&gt;
-</span><span class='line'>    | |   |     |   |   |   +-o IOHIDParamUserClient  &lt;class IOHIDParamUserClient, id 0x100000385, !registered, !matched, active, busy 0, retain 5$
-</span><span class='line'>    | |   |     |   |   |   +-o IOHIDEventSystemUserClient  &lt;class IOHIDEventSystemUserClient, id 0x1000003c1, !registered, !matched, active, busy$
-</span><span class='line'>    | |   |     |   |   |   +-o IOHIDEventSystemUserClient  &lt;class IOHIDEventSystemUserClient, id 0x1000003c9, !registered, !matched, active, busy$
-</span><span class='line'>    | |   |     |   |   +-o IOHIDSystem  &lt;class IOHIDSystem, id 0x1000002ac, registered, matched, active, busy 0 (0 ms), retain 19&gt;
-</span><span class='line'>    | |   |     |   |     +-o IOHIDStackShotUserClient  &lt;class IOHIDStackShotUserClient, id 0x10000035d, !registered, !matched, active, busy 0, re$
-</span><span class='line'>    | |   |     |   |     +-o IOHIDUserClient  &lt;class IOHIDUserClient, id 0x100000371, !registered, !matched, active, busy 0, retain 5&gt;
-</span><span class='line'>    | |   |     |   |     +-o IOHIDParamUserClient  &lt;class IOHIDParamUserClient, id 0x100000385, !registered, !matched, active, busy 0, retain 5&gt;
-</span><span class='line'>    | |   |     |   |     +-o IOHIDEventSystemUserClient  &lt;class IOHIDEventSystemUserClient, id 0x1000003c1, !registered, !matched, active, busy 0$
-</span><span class='line'>    | |   |     |   |     +-o IOHIDEventSystemUserClient  &lt;class IOHIDEventSystemUserClient, id 0x1000003c9, !registered, !matched, active, busy 0$
-</span><span class='line'>    | |   |     |   +-o IOHIDLibUserClient  &lt;class IOHIDLibUserClient, id 0x1000003c7, !registered, !matched, active, busy 0, retain 6&gt;
-</span><span class='line'>    | |   |     |   +-o IOHIDLibUserClient  &lt;class IOHIDLibUserClient, id 0x10000044b, !registered, !matched, active, busy 0, retain 6&gt;
-</span><span class='line'>...
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>What does this information tell us? It shows the hierarchy of drivers which implys us the chain of command. For example, IOHIDInterface is said to be a provider of AppleEmbeddedKeyboard; you can think of it as a data provider.</p>
-
-<p>The class beginning with IO belongs to the system. As you can see, there are 2 custom drivers, AppleUSBTCKeyboard and AppleEmbeddedKeyboard. I investigate further by the command <code>ioreg -c</code> and find out that AppleUSBTCKeyboard is a subclass of IOUSBHIDDriver and AppleEmbeddedKeyboard is a subclass of IOHIDEventDriver.</p>
-
-<p>My initial assumption about the driver is that it should do something about event dispatching. I start by looking at IOUSBHIDDriver.h and IOHIDEventDriver.h and found nothing that seems to match my assumption. Is my assumption wrong?</p>
-
-<p>I google &lsquo;AppleEmbeddedKeyboard&rsquo; and find a source code from Apple open source repository. I take a look at AppleEmbeddedKeyboard.cpp find this method overiding interesting:</p>
-
-<figure class='code'><figcaption><span>dispatchKeyboardEvent method</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class='c++'><span class='line'><span class="kt">void</span> <span class="n">AppleEmbeddedKeyboard</span><span class="o">::</span><span class="n">dispatchKeyboardEvent</span><span class="p">(</span>
-</span><span class='line'>                                <span class="n">AbsoluteTime</span>                <span class="n">timeStamp</span><span class="p">,</span>
-</span><span class='line'>                                <span class="n">UInt32</span>                      <span class="n">usagePage</span><span class="p">,</span>
-</span><span class='line'>                                <span class="n">UInt32</span>                      <span class="n">usage</span><span class="p">,</span>
-</span><span class='line'>                                <span class="n">UInt32</span>                      <span class="n">value</span><span class="p">,</span>
-</span><span class='line'>                                <span class="n">IOOptionBits</span>                <span class="n">options</span><span class="p">)</span>
-</span><span class='line'><span class="p">{</span>
-</span><span class='line'>    <span class="p">...</span>
-</span><span class='line'><span class="p">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>It turns out that the method <code>dispatchKeyboardEvent()</code> is declared in IOHIDEventService.h. So, I decide to write the kernel extension based on IOHIDEventDriver. With Apple documentation and suggestion from Pavel Prokofiev who writes <a href="http://code.google.com/p/macosx-nosleep-extension/">macosx-nosleep-extension</a>, I am able to complete it (It is not that hard but takes time to understand what things are).</p>
-
-<p>What my code does is intercepting the key and replace it if necessary.</p>
-
-<p>You can see my source code here <a href="https://github.com/ake-koomsin/LogitechWirelessPresenterKext">https://github.com/ake-koomsin/LogitechWirelessPresenterKext</a>.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/page//page/2/">&larr; Older</a>
@@ -1154,6 +1076,10 @@ send()/sendto()/sendmsg() and sockets. To use write(), writev() and &hellip;">
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/2014/11/04/verify-openbsd-install-media-from-os-x/">Verifing OpenBSD Install Media on OS X</a>
+      </li>
+    
+      <li class="post">
         <a href="/2014/07/04/digging-around-freebsd-socket-api-tcp-send-path/">Digging Around FreeBSD Socket API TCP Send Path</a>
       </li>
     
@@ -1167,10 +1093,6 @@ send()/sendto()/sendmsg() and sockets. To use write(), writev() and &hellip;">
     
       <li class="post">
         <a href="/2013/04/02/offscreening-and-multisampling-with-opengl/">Offscreen Rendering and Multisampling With OpenGL</a>
-      </li>
-    
-      <li class="post">
-        <a href="/2012/11/17/my-first-kernel-extension-for-logitech-presenter-device/">My First Kernel Extension for Logitech Presenter Device</a>
       </li>
     
   </ul>

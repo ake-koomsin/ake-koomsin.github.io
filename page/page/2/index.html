@@ -9,7 +9,7 @@
   <meta name="author" content="Ake Koomsin">
 
   
-  <meta name="description" content="I do a lot of presentation particularly those class projects. To make my presentation looks more professional, I decide to buy Logitech Professional &hellip;">
+  <meta name="description" content="It has been for a while since my last post. I was enjoying with my senior project, &ldquo;Accelerating Map Rendering with GPU&rdquo;. In this project &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -64,6 +64,200 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <!-- Now we're back to normal posts. Note the links used under href in both headers.-->
+      <h1 class="entry-title"><a href="/2013/04/02/offscreening-and-multisampling-with-opengl/">Offscreen Rendering and Multisampling With OpenGL</a></h1>
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-04-02T17:10:00+09:00" pubdate data-updated="true">Apr 2<span>nd</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>It has been for a while since my last post. I was enjoying with my senior project, &ldquo;Accelerating Map Rendering with GPU&rdquo;. In this project, my friend and I modified Mapnik, an opensource map rendering, to utilize Nvidia&rsquo;s <a href="https://developer.nvidia.com/nv-path-rendering" title="Nvidia's Path Rendering">Path Rendering</a>. Path Rendering is an OpenGL extension provided by Nvidia for vector graphic rendering. Nvidia <a href="http://dl.acm.org/citation.cfm?id=2366191" title="GPU-accelerated path rendering paper">claims</a> that its extensions aims to reduce overhead from traditional APIs when using them to draw vector graphics. In the end, we are able to make the map production 30-60% faster. Our implementation can be found on <a href="https://github.com/ake-koomsin/mapnik_nvpr">https://github.com/ake-koomsin/mapnik_nvpr</a></p>
+
+<p>There are two important things that we had to achieve in order to use Path Rendering extension for map rendering, offscreen rendering and multisampling. Offscreen rendering is important because we don&rsquo;t want the renderer to show the intermediate result. Multisampling is for producing a quality map.</p>
+
+<p>I think offscreen rendering combining with multisampling is an important piece of knowledge. It is also hard to find a complete refernce about these two. Therefore, I think it is worth writing about it.</p>
+
+<h2>Offscreen Rendering</h2>
+
+<p>Offscreen rendering is a technique that are commonly found in game development. Sometimes, there are situations that you want to generate a texture at runtime.</p>
+
+<p>To set up offscreen rendering, you have to create your own &ldquo;Framebuffer Object (FBO)&rdquo;. Actually, OpenGL has its own default FBO. A result stored in the default FBO will be shown onto the screen while the result stored in our own FBO will be not. The code below demonstrates how to set up our own FBO.</p>
+
+<figure class='code'><figcaption><span>Setting our own FBO for offscreen rendering</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="kt">int</span> <span class="n">fbo</span><span class="p">,</span> <span class="n">colorBuffer</span><span class="p">,</span> <span class="n">depthBuffer</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Create and bind the FBO</span>
+</span><span class='line'><span class="n">glGenFramebuffers</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fbo</span><span class="p">);</span>
+</span><span class='line'><span class="n">glBindFramebuffer</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="n">fbo</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Create color render buffer</span>
+</span><span class='line'><span class="n">glGenRenderbuffers</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">colorBuffer</span><span class="p">);</span>
+</span><span class='line'><span class="n">glBindRenderbuffer</span><span class="p">(</span><span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">colorBuffer</span><span class="p">);</span>
+</span><span class='line'><span class="n">glRenderbufferStorage</span><span class="p">(</span><span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">GL_RGBA8</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">);</span>
+</span><span class='line'><span class="n">glFramebufferRenderbuffer</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="n">GL_COLOR_ATTACHMENT0</span><span class="p">,</span> <span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">colorBuffer</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Create depth render buffer (This is optional)</span>
+</span><span class='line'><span class="n">glGenRenderbuffers</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">depthBuffer</span><span class="p">);</span>
+</span><span class='line'><span class="n">glBindRenderbuffer</span><span class="p">(</span><span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">depthBuffer</span><span class="p">);</span>
+</span><span class='line'><span class="n">glRenderbufferStorage</span><span class="p">(</span><span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">GL_DEPTH24_STENCIL8</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">);</span>
+</span><span class='line'><span class="n">glFramebufferRenderbuffer</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="n">GL_DEPTH_ATTACHMENT</span><span class="p">,</span> <span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">depthBuffer</span><span class="p">);</span>
+</span><span class='line'><span class="n">glFramebufferRenderbuffer</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="n">GL_STENCIL_ATTACHMENT</span><span class="p">,</span> <span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">depthBuffer</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Bind Texture assuming we have created a texture</span>
+</span><span class='line'><span class="n">glFramebufferTexture2D</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="n">GL_COLOR_ATTACHMENT0</span><span class="p">,</span> <span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="n">aTexture</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Draw something</span>
+</span><span class='line'><span class="n">drawGraphic</span><span class="p">();</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>It is straightforward. First, we create a FBO. After that, we create render buffers and textures and attach them to our FBO.</p>
+
+<h2>Multisampling</h2>
+
+<p>By default, OpenGL does not care about antialiasing. As a result, the output contains stair-like artifacts which degrade visual quality. We have to enable multisampling by the code below.</p>
+
+<figure class='code'><figcaption><span>Enabling multisampling</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">glEanble</span><span class="p">(</span><span class="n">GL_MULTISAMPLE</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Combining Offscreen Rendering and Multisampling Together</h2>
+
+<p>It turns out that to combine them together, we need additional set up which are multisample framebuffer storage and multisample texture. The code below demonstrates how to do.</p>
+
+<figure class='code'><figcaption><span>Setting up FBO with Multisampling</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="c1">// Create multisample texture</span>
+</span><span class='line'><span class="n">glBindTexture</span><span class="p">(</span><span class="n">GL_TEXTURE_2D_MULTISAMPLE</span><span class="p">,</span> <span class="n">aMultisampleTexture</span><span class="p">);</span>
+</span><span class='line'><span class="n">glTexImage2DMultisample</span><span class="p">(</span><span class="n">GL_TEXTURE_2D_MULTISAMPLE</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">GL_RGBA</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">GL_TRUE</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="kt">int</span> <span class="n">fbo</span><span class="p">,</span> <span class="n">colorBuffer</span><span class="p">,</span> <span class="n">depthBuffer</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Create and bind the FBO</span>
+</span><span class='line'><span class="n">glGenFramebuffers</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fbo</span><span class="p">);</span>
+</span><span class='line'><span class="n">glBindFramebuffer</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="n">fbo</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Create color render buffer</span>
+</span><span class='line'><span class="n">glGenRenderbuffers</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">colorBuffer</span><span class="p">);</span>
+</span><span class='line'><span class="n">glBindRenderbuffer</span><span class="p">(</span><span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">colorBuffer</span><span class="p">);</span>
+</span><span class='line'><span class="n">glRenderbufferStorageMultisample</span><span class="p">(</span><span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">GL_RGBA8</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">);</span>
+</span><span class='line'><span class="n">glFramebufferRenderbuffer</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="n">GL_COLOR_ATTACHMENT0</span><span class="p">,</span> <span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">colorBuffer</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Create depth render buffer (This is optional)</span>
+</span><span class='line'><span class="n">glGenRenderbuffers</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">depthBuffer</span><span class="p">);</span>
+</span><span class='line'><span class="n">glBindRenderbuffer</span><span class="p">(</span><span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">depthBuffer</span><span class="p">);</span>
+</span><span class='line'><span class="n">glRenderbufferStorageMultisample</span><span class="p">(</span><span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">GL_DEPTH24_STENCIL8</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">);</span>
+</span><span class='line'><span class="n">glFramebufferRenderbuffer</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="n">GL_DEPTH_ATTACHMENT</span><span class="p">,</span> <span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">depthBuffer</span><span class="p">);</span>
+</span><span class='line'><span class="n">glFramebufferRenderbuffer</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="n">GL_STENCIL_ATTACHMENT</span><span class="p">,</span> <span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">depthBuffer</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Bind Texture assuming we have created a texture</span>
+</span><span class='line'><span class="n">glFramebufferTexture2D</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="n">GL_COLOR_ATTACHMENT0</span><span class="p">,</span> <span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="n">aTexture</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Enable multisampling</span>
+</span><span class='line'><span class="n">glEanble</span><span class="p">(</span><span class="n">GL_MULTISAMPLE</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Draw something</span>
+</span><span class='line'><span class="n">drawGraphic</span><span class="p">();</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Retrieving the result</h2>
+
+<p>After offscreen rendering, you may want to display the result onto the screen. When you are using multisampling FBO, you are not able to use the result stored in the texture directly. You have to do &ldquo;Blitting&rdquo; which transfer the result from one FBO to another. The code below shows how to do.</p>
+
+<figure class='code'><figcaption><span>Blitting</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">glBindFramebuffer</span><span class="p">(</span><span class="n">GL_READ_FRAMEBUFFER</span><span class="p">,</span> <span class="n">multisampledFBO</span><span class="p">);</span>
+</span><span class='line'><span class="n">glBindFramebuffer</span><span class="p">(</span><span class="n">GL_DRAW_FRAMEBUFFER</span><span class="p">,</span> <span class="n">normalFBO</span><span class="p">);</span> <span class="c1">// Normal FBO can be the default FBO too.</span>
+</span><span class='line'><span class="n">glBlitFramebuffer</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">GL_COLOR_BUFFER_BIT</span><span class="p">,</span> <span class="n">GL_NEAREST</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I hope these snippets are a useful reference.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -487,114 +681,6 @@
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <!-- Now we're back to normal posts. Note the links used under href in both headers.-->
-      <h1 class="entry-title"><a href="/2012/01/02/getting-zyxel-nwd-270n-works-on-ubuntu-10-dot-04-lts/">Getting Zyxel NWD-270N Works on Ubuntu 10.04 LTS</a></h1>
-      
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2012-01-02T01:36:00+09:00" pubdate data-updated="true">Jan 2<span>nd</span>, 2012</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>I have to install Ubuntu 10.04 LTS on a machine as a sales terminal which will run Ruby on Rails. The problem that I encounter is Zyxel NWD-270N, a wireless adaptor. At the first glance, it looks like it should work out of box. Zyxel NWD-270N supposes to use rt2870sta driver.</p>
-
-<p>Unfortunately, there seems to be something wrong with Ubuntu 10.04 LTS that tries to load rt2800usb and it does not work. So, I google and find this <a href="http://ubuntuforums.org/showthread.php?t=1419504&amp;page=6">link</a></p>
-
-<p>Noting that I haven&rsquo;t updated the Ubuntu after install yet.</p>
-
-<p>Since this thread is about Asus USB-N13, I have to find my vendor and product ID first by run:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'>lsusb
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>And here is the partial result:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'>...
-</span><span class='line'>Bus 002 Device 003: ID 0586:341a Zyxel Communications Corp.
-</span><span class='line'>...
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The next step is to tell the OS that it should use rt2870sta driver when it sees this vendor and product ID. There are two files that I have to create</p>
-
-<p>The first one is /etc/udev/rules.d/network_drivers.rules</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'>sudo vim /etc/udev/rules.d/network_drivers.rules
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>and add this line:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">ACTION</span><span class="o">==</span><span class="s2">&quot;add&quot;</span>, <span class="nv">SUBSYSTEM</span><span class="o">==</span><span class="s2">&quot;usb&quot;</span>, ATTR<span class="o">{</span>idVendor<span class="o">}==</span><span class="s2">&quot;0586&quot;</span>, ATTR<span class="o">{</span>idProduct<span class="o">}==</span><span class="s2">&quot;341a&quot;</span>, RUN+<span class="o">=</span><span class="s2">&quot;/sbin/modprobe -qba rt2870sta&quot;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The second one is /etc/modprobe.d/network_drivers.conf</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'>sudo vim /etc/modprobe.d/network_drivers.conf
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>and add this line:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'>install rt2870sta /sbin/modprobe --ignore-install rt2870sta <span class="nv">$CMDLINE_OPTS</span>; /bin/echo <span class="s2">&quot;0586 341a&quot;</span> &gt; /sys/bus/usb/drivers/rt2870/new_id
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>After restart, it seems to be able to find wireless access points but it is not able to connect. Therefore, I decide to find an old wireless adaptor as a temporary adaptor in order to connect to the Internet to run update:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'>sudo aptitude update
-</span><span class='line'>sudo aptitude upgrade
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>And also install (I don&rsquo;t know if it is necessary after reading the package description &ldquo;This empty package allows people to keep their backported wireless modules up-to-date when upgrading their Linux kernel.&rdquo; I install it anyway)</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'>sudo aptitude install linux-backports-modules-wireless-lucid-generic
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>After restart again, it works! However, it doesn&rsquo;t seems to run on wireless N, only at 54 Mbps. Anyway it works and I can continue my work.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/page//page/3/">&larr; Older</a>
@@ -612,6 +698,10 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/2014/11/22/memory-mapping-in-kernel-space-on-freebsd/">Memory Mapping in Kernel Space on FreeBSD</a>
+      </li>
+    
+      <li class="post">
         <a href="/2014/11/04/verify-openbsd-install-media-from-os-x/">Verifing OpenBSD Install Media on OS X</a>
       </li>
     
@@ -625,10 +715,6 @@
     
       <li class="post">
         <a href="/2013/04/17/building-facebook-home-with-quartz-composer/">Building Facebook Home With Quartz Composer</a>
-      </li>
-    
-      <li class="post">
-        <a href="/2013/04/02/offscreening-and-multisampling-with-opengl/">Offscreen Rendering and Multisampling With OpenGL</a>
       </li>
     
   </ul>

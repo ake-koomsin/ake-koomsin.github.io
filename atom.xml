@@ -4,7 +4,7 @@
   <title><![CDATA[Ake Koomsin]]></title>
   <link href="http://ake.in.th/atom.xml" rel="self"/>
   <link href="http://ake.in.th/"/>
-  <updated>2014-11-04T20:39:08+09:00</updated>
+  <updated>2014-11-22T15:16:10+09:00</updated>
   <id>http://ake.in.th/</id>
   <author>
     <name><![CDATA[Ake Koomsin]]></name>
@@ -12,6 +12,150 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Memory Mapping in Kernel Space on FreeBSD]]></title>
+    <link href="http://ake.in.th/2014/11/22/memory-mapping-in-kernel-space-on-freebsd/"/>
+    <updated>2014-11-22T13:13:46+09:00</updated>
+    <id>http://ake.in.th/2014/11/22/memory-mapping-in-kernel-space-on-freebsd</id>
+    <content type="html"><![CDATA[<p>It might sound strange to do some memory mapping in the kernel space. You probably have heard of <a href="http://netbsd.gw.com/cgi-bin/man-cgi?bpfjit+4.pmax+NetBSD-current" title="BPFJIT">bpfjit</a>. It is a JIT compiler of filter program sent to a bpf device. Bpfjit uses <a href="http://sljit.sourceforge.net" title="Stack-Less Just-In-Time library">sljit</a> library for compiling. One requirement of JIT compiler is that the compiled code must reside in executable memory area. Let&rsquo;s take a look at the sljit source code in the NetBSD tree to see how it is done.</p>
+
+<figure class='code'><figcaption><span>In sys/external/bsd/sljit/dist/sljit_src/sljitExecAllocator.c</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="p">...</span>
+</span><span class='line'><span class="k">static</span> <span class="n">SLJIT_INLINE</span> <span class="kt">void</span><span class="o">*</span> <span class="n">alloc_chunk</span><span class="p">(</span><span class="n">sljit_uw</span> <span class="n">size</span><span class="p">)</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'><span class="cp">#ifdef _KERNEL</span>
+</span><span class='line'>  <span class="k">return</span> <span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="p">)</span><span class="n">uvm_km_alloc</span><span class="p">(</span><span class="n">module_map</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span>
+</span><span class='line'>      <span class="n">PAGE_SIZE</span><span class="p">,</span> <span class="n">UVM_KMF_WIRED</span> <span class="o">|</span> <span class="n">UVM_KMF_ZERO</span> <span class="o">|</span> <span class="n">UVM_KMF_EXEC</span><span class="p">);</span>
+</span><span class='line'><span class="cp">#else</span>
+</span><span class='line'>  <span class="kt">void</span><span class="o">*</span> <span class="n">retval</span> <span class="o">=</span> <span class="n">mmap</span><span class="p">(</span><span class="nb">NULL</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">PROT_READ</span> <span class="o">|</span> <span class="n">PROT_WRITE</span> <span class="o">|</span> <span class="n">PROT_EXEC</span><span class="p">,</span> <span class="n">MAP_PRIVATE</span> <span class="o">|</span> <span class="n">MAP_ANON</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>  <span class="k">return</span> <span class="p">(</span><span class="n">retval</span> <span class="o">!=</span> <span class="n">MAP_FAILED</span><span class="p">)</span> <span class="o">?</span> <span class="n">retval</span> <span class="o">:</span> <span class="nb">NULL</span><span class="p">;</span>
+</span><span class='line'><span class="cp">#endif</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'><span class="p">...</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Normally, <code>mmap()</code> is used along with <code>PROT_EXEC</code> and <code>MAP_ANON</code> in user space application to allocate executable memory area. However, in kernel space, it requires another function to do. In NetBSD, <code>uvm_km_alloc()</code> is used with <code>UVM_KMF_EXEC</code> flag to allocate executable memory area. Noting that the <code>UVM_KMF_EXEC</code> flag is not written in the <code>uvm_km_alloc()</code> man page.</p>
+
+<p>However, after spending hours in both source code and man page of FreeBSD, it seems that there is no kernel memory allocation API to allocate executable memory. That makes me read the implementation of <code>mmap()</code>. After studying the source code for a while, it is possible to do memory mapping in the kernel as shown below.</p>
+
+<figure class='code'><figcaption><span>Part of kernel module code example</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">static</span> <span class="kt">int</span>
+</span><span class='line'><span class="nf">example_syscall</span><span class="p">(</span><span class="k">struct</span> <span class="kr">thread</span> <span class="o">*</span><span class="n">td</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="n">vm_offset_t</span> <span class="n">addr</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">vm_size_t</span> <span class="n">size</span><span class="p">,</span> <span class="n">pageoff</span><span class="p">;</span>
+</span><span class='line'>  <span class="kt">void</span> <span class="o">*</span><span class="n">handle</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">objtype_t</span> <span class="n">handle_type</span> <span class="o">=</span> <span class="n">OBJT_DEFAULT</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">vm_prot_t</span> <span class="n">maxprot</span> <span class="o">=</span> <span class="n">VM_PROT_ALL</span><span class="p">;</span>
+</span><span class='line'>  <span class="kt">int</span> <span class="n">flags</span> <span class="o">=</span> <span class="n">MAP_ANON</span> <span class="o">|</span> <span class="n">MAP_PRIVATE</span><span class="p">;</span>
+</span><span class='line'>  <span class="kt">off_t</span> <span class="n">pos</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span><span class='line'>  
+</span><span class='line'>  <span class="n">size</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">*</span> <span class="k">sizeof</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="p">);</span>
+</span><span class='line'>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;original size: %lu</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="cm">/*</span>
+</span><span class='line'><span class="cm">  * Align the file position to a page boundary,</span>
+</span><span class='line'><span class="cm">  * and save its page offset component.</span>
+</span><span class='line'><span class="cm">  */</span>
+</span><span class='line'>  <span class="n">pageoff</span> <span class="o">=</span> <span class="p">(</span><span class="n">pos</span> <span class="o">&amp;</span> <span class="n">PAGE_MASK</span><span class="p">);</span>
+</span><span class='line'>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;pageoff: %ld</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">pageoff</span><span class="p">);</span>
+</span><span class='line'>  <span class="n">pos</span> <span class="o">-=</span> <span class="n">pageoff</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;pos: %lu</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">pos</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="cm">/* Adjust size for rounding (on both ends). */</span>
+</span><span class='line'>  <span class="n">size</span> <span class="o">+=</span> <span class="n">pageoff</span><span class="p">;</span>            <span class="cm">/* low end... */</span>
+</span><span class='line'>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;size+=pageoff: %lu</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+</span><span class='line'>  <span class="n">size</span> <span class="o">=</span> <span class="p">(</span><span class="n">vm_size_t</span><span class="p">)</span> <span class="n">round_page</span><span class="p">(</span><span class="n">size</span><span class="p">);</span> <span class="cm">/* hi end */</span>
+</span><span class='line'>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;size after round page: %lu</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kt">int</span> <span class="n">error</span> <span class="o">=</span> <span class="n">vm_mmap</span><span class="p">(</span><span class="n">kernel_map</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">addr</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">maxprot</span><span class="p">,</span>
+</span><span class='line'>            <span class="n">maxprot</span><span class="p">,</span> <span class="n">flags</span><span class="p">,</span> <span class="n">handle_type</span><span class="p">,</span> <span class="n">handle</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>   
+</span><span class='line'>  <span class="k">if</span> <span class="p">(</span><span class="n">error</span><span class="p">)</span> <span class="k">return</span> <span class="p">(</span><span class="n">error</span><span class="p">);</span>
+</span><span class='line'>  <span class="kt">int</span> <span class="n">result</span> <span class="o">=</span> <span class="n">kernacc</span><span class="p">((</span><span class="kt">void</span> <span class="o">*</span><span class="p">)</span><span class="n">addr</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">VM_PROT_EXECUTE</span><span class="p">);</span>
+</span><span class='line'>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;result: %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">result</span><span class="p">);</span>
+</span><span class='line'>  <span class="n">vm_map_delete</span><span class="p">(</span><span class="n">kernel_map</span><span class="p">,</span> <span class="n">addr</span><span class="p">,</span> <span class="n">addr</span> <span class="o">+</span> <span class="n">size</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">return</span> <span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The result of running this system call is shown below.</p>
+
+<figure class='code'><figcaption><span>Result</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>original size: 80
+</span><span class='line'>pageoff: 0
+</span><span class='line'>pos: 0
+</span><span class='line'>size+=pageoff: 80
+</span><span class='line'>size after round page: 4096
+</span><span class='line'>result: 1
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>vm_mmap()</code> is an internal implementation of <code>mmap()</code> and <code>vm_map_delete()</code> is an internal implementation of <code>munmap()</code>. The first argument of both <code>vm_map()</code> and <code>vm_map_delete()</code> is the memory area to map. Normally it would be the map of the process virtual memory address space. In this case, it is <code>kernel_map</code> which is a global variable. The important thing is aligning and rounding. Otherwise, it will end up in kernel panic because of page fault. Noting that the aligning and rounding comment in the example are from FreeBSD&rsquo;s <code>sys_mmap()</code> source code.</p>
+
+<p>The <code>kernacc()</code> function is for testing a memory area if it is readable, writable, executable or not. In the example, it tests if the memory area is executable or not. The result is yes. Noting that in the example I specify that the memory is readable, writable and executable through <code>VM_PROT_ALL</code>.</p>
+
+<p>One good thing about using <code>vm_map()</code> for memory allocation is it is possible to change the memory protection easily through <code>vm_map_protect()</code>, the internal implementation of <code>mprotect()</code>. One probably wants the memory to be read and write only during JIT compilation and read and execute only after that for security reason.</p>
+
+<p>And that&rsquo;s all about doing memory mapping in kernel space on FreeBSD. Happy Kernel Hacking!</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Verifing OpenBSD Install Media on OS X]]></title>

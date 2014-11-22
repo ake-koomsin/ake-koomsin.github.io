@@ -9,7 +9,7 @@
   <meta name="author" content="Ake Koomsin">
 
   
-  <meta name="description" content="It is a very good time to launch this blog on New Year. I aim to post everything I learned from school and work as a technical journey. I hope that &hellip;">
+  <meta name="description" content="I have to install Ubuntu 10.04 LTS on a machine as a sales terminal which will run Ruby on Rails. The problem that I encounter is Zyxel NWD-270N, a &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -64,6 +64,114 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <!-- Now we're back to normal posts. Note the links used under href in both headers.-->
+      <h1 class="entry-title"><a href="/2012/01/02/getting-zyxel-nwd-270n-works-on-ubuntu-10-dot-04-lts/">Getting Zyxel NWD-270N Works on Ubuntu 10.04 LTS</a></h1>
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-01-02T01:36:00+09:00" pubdate data-updated="true">Jan 2<span>nd</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I have to install Ubuntu 10.04 LTS on a machine as a sales terminal which will run Ruby on Rails. The problem that I encounter is Zyxel NWD-270N, a wireless adaptor. At the first glance, it looks like it should work out of box. Zyxel NWD-270N supposes to use rt2870sta driver.</p>
+
+<p>Unfortunately, there seems to be something wrong with Ubuntu 10.04 LTS that tries to load rt2800usb and it does not work. So, I google and find this <a href="http://ubuntuforums.org/showthread.php?t=1419504&amp;page=6">link</a></p>
+
+<p>Noting that I haven&rsquo;t updated the Ubuntu after install yet.</p>
+
+<p>Since this thread is about Asus USB-N13, I have to find my vendor and product ID first by run:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>lsusb
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And here is the partial result:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>...
+</span><span class='line'>Bus 002 Device 003: ID 0586:341a Zyxel Communications Corp.
+</span><span class='line'>...
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The next step is to tell the OS that it should use rt2870sta driver when it sees this vendor and product ID. There are two files that I have to create</p>
+
+<p>The first one is /etc/udev/rules.d/network_drivers.rules</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>sudo vim /etc/udev/rules.d/network_drivers.rules
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>and add this line:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">ACTION</span><span class="o">==</span><span class="s2">&quot;add&quot;</span>, <span class="nv">SUBSYSTEM</span><span class="o">==</span><span class="s2">&quot;usb&quot;</span>, ATTR<span class="o">{</span>idVendor<span class="o">}==</span><span class="s2">&quot;0586&quot;</span>, ATTR<span class="o">{</span>idProduct<span class="o">}==</span><span class="s2">&quot;341a&quot;</span>, RUN+<span class="o">=</span><span class="s2">&quot;/sbin/modprobe -qba rt2870sta&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The second one is /etc/modprobe.d/network_drivers.conf</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>sudo vim /etc/modprobe.d/network_drivers.conf
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>and add this line:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>install rt2870sta /sbin/modprobe --ignore-install rt2870sta <span class="nv">$CMDLINE_OPTS</span>; /bin/echo <span class="s2">&quot;0586 341a&quot;</span> &gt; /sys/bus/usb/drivers/rt2870/new_id
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>After restart, it seems to be able to find wireless access points but it is not able to connect. Therefore, I decide to find an old wireless adaptor as a temporary adaptor in order to connect to the Internet to run update:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>sudo aptitude update
+</span><span class='line'>sudo aptitude upgrade
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And also install (I don&rsquo;t know if it is necessary after reading the package description &ldquo;This empty package allows people to keep their backported wireless modules up-to-date when upgrading their Linux kernel.&rdquo; I install it anyway)</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>sudo aptitude install linux-backports-modules-wireless-lucid-generic
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>After restart again, it works! However, it doesn&rsquo;t seems to run on wireless N, only at 54 Mbps. Anyway it works and I can continue my work.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -126,6 +234,10 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/2014/11/22/memory-mapping-in-kernel-space-on-freebsd/">Memory Mapping in Kernel Space on FreeBSD</a>
+      </li>
+    
+      <li class="post">
         <a href="/2014/11/04/verify-openbsd-install-media-from-os-x/">Verifing OpenBSD Install Media on OS X</a>
       </li>
     
@@ -139,10 +251,6 @@
     
       <li class="post">
         <a href="/2013/04/17/building-facebook-home-with-quartz-composer/">Building Facebook Home With Quartz Composer</a>
-      </li>
-    
-      <li class="post">
-        <a href="/2013/04/02/offscreening-and-multisampling-with-opengl/">Offscreen Rendering and Multisampling With OpenGL</a>
       </li>
     
   </ul>

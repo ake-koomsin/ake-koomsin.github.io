@@ -9,7 +9,7 @@
   <meta name="author" content="Ake Koomsin">
 
   
-  <meta name="description" content="New OpenBSD 5.6 has been released. It is time to give it a try. In the installation maunal, There is a section &ldquo;Verifying the OpenBSD &hellip;">
+  <meta name="description" content="It might sound strange to do some memory mapping in the kernel space. You probably have heard of bpfjit. It is a JIT compiler of filter program sent &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -64,6 +64,179 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <!-- Now we're back to normal posts. Note the links used under href in both headers.-->
+      <h1 class="entry-title"><a href="/2014/11/22/memory-mapping-in-kernel-space-on-freebsd/">Memory Mapping in Kernel Space on FreeBSD</a></h1>
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-11-22T13:13:46+09:00" pubdate data-updated="true">Nov 22<span>nd</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>It might sound strange to do some memory mapping in the kernel space. You probably have heard of <a href="http://netbsd.gw.com/cgi-bin/man-cgi?bpfjit+4.pmax+NetBSD-current" title="BPFJIT">bpfjit</a>. It is a JIT compiler of filter program sent to a bpf device. Bpfjit uses <a href="http://sljit.sourceforge.net" title="Stack-Less Just-In-Time library">sljit</a> library for compiling. One requirement of JIT compiler is that the compiled code must reside in executable memory area. Let&rsquo;s take a look at the sljit source code in the NetBSD tree to see how it is done.</p>
+
+<figure class='code'><figcaption><span>In sys/external/bsd/sljit/dist/sljit_src/sljitExecAllocator.c</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="p">...</span>
+</span><span class='line'><span class="k">static</span> <span class="n">SLJIT_INLINE</span> <span class="kt">void</span><span class="o">*</span> <span class="n">alloc_chunk</span><span class="p">(</span><span class="n">sljit_uw</span> <span class="n">size</span><span class="p">)</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'><span class="cp">#ifdef _KERNEL</span>
+</span><span class='line'>  <span class="k">return</span> <span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="p">)</span><span class="n">uvm_km_alloc</span><span class="p">(</span><span class="n">module_map</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span>
+</span><span class='line'>      <span class="n">PAGE_SIZE</span><span class="p">,</span> <span class="n">UVM_KMF_WIRED</span> <span class="o">|</span> <span class="n">UVM_KMF_ZERO</span> <span class="o">|</span> <span class="n">UVM_KMF_EXEC</span><span class="p">);</span>
+</span><span class='line'><span class="cp">#else</span>
+</span><span class='line'>  <span class="kt">void</span><span class="o">*</span> <span class="n">retval</span> <span class="o">=</span> <span class="n">mmap</span><span class="p">(</span><span class="nb">NULL</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">PROT_READ</span> <span class="o">|</span> <span class="n">PROT_WRITE</span> <span class="o">|</span> <span class="n">PROT_EXEC</span><span class="p">,</span> <span class="n">MAP_PRIVATE</span> <span class="o">|</span> <span class="n">MAP_ANON</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>  <span class="k">return</span> <span class="p">(</span><span class="n">retval</span> <span class="o">!=</span> <span class="n">MAP_FAILED</span><span class="p">)</span> <span class="o">?</span> <span class="n">retval</span> <span class="o">:</span> <span class="nb">NULL</span><span class="p">;</span>
+</span><span class='line'><span class="cp">#endif</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'><span class="p">...</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Normally, <code>mmap()</code> is used along with <code>PROT_EXEC</code> and <code>MAP_ANON</code> in user space application to allocate executable memory area. However, in kernel space, it requires another function to do. In NetBSD, <code>uvm_km_alloc()</code> is used with <code>UVM_KMF_EXEC</code> flag to allocate executable memory area. Noting that the <code>UVM_KMF_EXEC</code> flag is not written in the <code>uvm_km_alloc()</code> man page.</p>
+
+<p>However, after spending hours in both source code and man page of FreeBSD, it seems that there is no kernel memory allocation API to allocate executable memory. That makes me read the implementation of <code>mmap()</code>. After studying the source code for a while, it is possible to do memory mapping in the kernel as shown below.</p>
+
+<figure class='code'><figcaption><span>Part of kernel module code example</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">static</span> <span class="kt">int</span>
+</span><span class='line'><span class="nf">example_syscall</span><span class="p">(</span><span class="k">struct</span> <span class="kr">thread</span> <span class="o">*</span><span class="n">td</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="n">vm_offset_t</span> <span class="n">addr</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">vm_size_t</span> <span class="n">size</span><span class="p">,</span> <span class="n">pageoff</span><span class="p">;</span>
+</span><span class='line'>  <span class="kt">void</span> <span class="o">*</span><span class="n">handle</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">objtype_t</span> <span class="n">handle_type</span> <span class="o">=</span> <span class="n">OBJT_DEFAULT</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">vm_prot_t</span> <span class="n">maxprot</span> <span class="o">=</span> <span class="n">VM_PROT_ALL</span><span class="p">;</span>
+</span><span class='line'>  <span class="kt">int</span> <span class="n">flags</span> <span class="o">=</span> <span class="n">MAP_ANON</span> <span class="o">|</span> <span class="n">MAP_PRIVATE</span><span class="p">;</span>
+</span><span class='line'>  <span class="kt">off_t</span> <span class="n">pos</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span><span class='line'>  
+</span><span class='line'>  <span class="n">size</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">*</span> <span class="k">sizeof</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="p">);</span>
+</span><span class='line'>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;original size: %lu</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="cm">/*</span>
+</span><span class='line'><span class="cm">  * Align the file position to a page boundary,</span>
+</span><span class='line'><span class="cm">  * and save its page offset component.</span>
+</span><span class='line'><span class="cm">  */</span>
+</span><span class='line'>  <span class="n">pageoff</span> <span class="o">=</span> <span class="p">(</span><span class="n">pos</span> <span class="o">&amp;</span> <span class="n">PAGE_MASK</span><span class="p">);</span>
+</span><span class='line'>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;pageoff: %ld</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">pageoff</span><span class="p">);</span>
+</span><span class='line'>  <span class="n">pos</span> <span class="o">-=</span> <span class="n">pageoff</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;pos: %lu</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">pos</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="cm">/* Adjust size for rounding (on both ends). */</span>
+</span><span class='line'>  <span class="n">size</span> <span class="o">+=</span> <span class="n">pageoff</span><span class="p">;</span>            <span class="cm">/* low end... */</span>
+</span><span class='line'>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;size+=pageoff: %lu</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+</span><span class='line'>  <span class="n">size</span> <span class="o">=</span> <span class="p">(</span><span class="n">vm_size_t</span><span class="p">)</span> <span class="n">round_page</span><span class="p">(</span><span class="n">size</span><span class="p">);</span> <span class="cm">/* hi end */</span>
+</span><span class='line'>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;size after round page: %lu</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kt">int</span> <span class="n">error</span> <span class="o">=</span> <span class="n">vm_mmap</span><span class="p">(</span><span class="n">kernel_map</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">addr</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">maxprot</span><span class="p">,</span>
+</span><span class='line'>            <span class="n">maxprot</span><span class="p">,</span> <span class="n">flags</span><span class="p">,</span> <span class="n">handle_type</span><span class="p">,</span> <span class="n">handle</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>   
+</span><span class='line'>  <span class="k">if</span> <span class="p">(</span><span class="n">error</span><span class="p">)</span> <span class="k">return</span> <span class="p">(</span><span class="n">error</span><span class="p">);</span>
+</span><span class='line'>  <span class="kt">int</span> <span class="n">result</span> <span class="o">=</span> <span class="n">kernacc</span><span class="p">((</span><span class="kt">void</span> <span class="o">*</span><span class="p">)</span><span class="n">addr</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">VM_PROT_EXECUTE</span><span class="p">);</span>
+</span><span class='line'>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;result: %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">result</span><span class="p">);</span>
+</span><span class='line'>  <span class="n">vm_map_delete</span><span class="p">(</span><span class="n">kernel_map</span><span class="p">,</span> <span class="n">addr</span><span class="p">,</span> <span class="n">addr</span> <span class="o">+</span> <span class="n">size</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">return</span> <span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The result of running this system call is shown below.</p>
+
+<figure class='code'><figcaption><span>Result</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>original size: 80
+</span><span class='line'>pageoff: 0
+</span><span class='line'>pos: 0
+</span><span class='line'>size+=pageoff: 80
+</span><span class='line'>size after round page: 4096
+</span><span class='line'>result: 1
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>vm_mmap()</code> is an internal implementation of <code>mmap()</code> and <code>vm_map_delete()</code> is an internal implementation of <code>munmap()</code>. The first argument of both <code>vm_map()</code> and <code>vm_map_delete()</code> is the memory area to map. Normally it would be the map of the process virtual memory address space. In this case, it is <code>kernel_map</code> which is a global variable. The important thing is aligning and rounding. Otherwise, it will end up in kernel panic because of page fault. Noting that the aligning and rounding comment in the example are from FreeBSD&rsquo;s <code>sys_mmap()</code> source code.</p>
+
+<p>The <code>kernacc()</code> function is for testing a memory area if it is readable, writable, executable or not. In the example, it tests if the memory area is executable or not. The result is yes. Noting that in the example I specify that the memory is readable, writable and executable through <code>VM_PROT_ALL</code>.</p>
+
+<p>One good thing about using <code>vm_map()</code> for memory allocation is it is possible to change the memory protection easily through <code>vm_map_protect()</code>, the internal implementation of <code>mprotect()</code>. One probably wants the memory to be read and write only during JIT compilation and read and execute only after that for security reason.</p>
+
+<p>And that&rsquo;s all about doing memory mapping in kernel space on FreeBSD. Happy Kernel Hacking!</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -867,200 +1040,6 @@
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <!-- Now we're back to normal posts. Note the links used under href in both headers.-->
-      <h1 class="entry-title"><a href="/2013/04/02/offscreening-and-multisampling-with-opengl/">Offscreen Rendering and Multisampling With OpenGL</a></h1>
-      
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-04-02T17:10:00+09:00" pubdate data-updated="true">Apr 2<span>nd</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>It has been for a while since my last post. I was enjoying with my senior project, &ldquo;Accelerating Map Rendering with GPU&rdquo;. In this project, my friend and I modified Mapnik, an opensource map rendering, to utilize Nvidia&rsquo;s <a href="https://developer.nvidia.com/nv-path-rendering" title="Nvidia's Path Rendering">Path Rendering</a>. Path Rendering is an OpenGL extension provided by Nvidia for vector graphic rendering. Nvidia <a href="http://dl.acm.org/citation.cfm?id=2366191" title="GPU-accelerated path rendering paper">claims</a> that its extensions aims to reduce overhead from traditional APIs when using them to draw vector graphics. In the end, we are able to make the map production 30-60% faster. Our implementation can be found on <a href="https://github.com/ake-koomsin/mapnik_nvpr">https://github.com/ake-koomsin/mapnik_nvpr</a></p>
-
-<p>There are two important things that we had to achieve in order to use Path Rendering extension for map rendering, offscreen rendering and multisampling. Offscreen rendering is important because we don&rsquo;t want the renderer to show the intermediate result. Multisampling is for producing a quality map.</p>
-
-<p>I think offscreen rendering combining with multisampling is an important piece of knowledge. It is also hard to find a complete refernce about these two. Therefore, I think it is worth writing about it.</p>
-
-<h2>Offscreen Rendering</h2>
-
-<p>Offscreen rendering is a technique that are commonly found in game development. Sometimes, there are situations that you want to generate a texture at runtime.</p>
-
-<p>To set up offscreen rendering, you have to create your own &ldquo;Framebuffer Object (FBO)&rdquo;. Actually, OpenGL has its own default FBO. A result stored in the default FBO will be shown onto the screen while the result stored in our own FBO will be not. The code below demonstrates how to set up our own FBO.</p>
-
-<figure class='code'><figcaption><span>Setting our own FBO for offscreen rendering</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="kt">int</span> <span class="n">fbo</span><span class="p">,</span> <span class="n">colorBuffer</span><span class="p">,</span> <span class="n">depthBuffer</span><span class="p">;</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// Create and bind the FBO</span>
-</span><span class='line'><span class="n">glGenFramebuffers</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fbo</span><span class="p">);</span>
-</span><span class='line'><span class="n">glBindFramebuffer</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="n">fbo</span><span class="p">);</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// Create color render buffer</span>
-</span><span class='line'><span class="n">glGenRenderbuffers</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">colorBuffer</span><span class="p">);</span>
-</span><span class='line'><span class="n">glBindRenderbuffer</span><span class="p">(</span><span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">colorBuffer</span><span class="p">);</span>
-</span><span class='line'><span class="n">glRenderbufferStorage</span><span class="p">(</span><span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">GL_RGBA8</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">);</span>
-</span><span class='line'><span class="n">glFramebufferRenderbuffer</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="n">GL_COLOR_ATTACHMENT0</span><span class="p">,</span> <span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">colorBuffer</span><span class="p">);</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// Create depth render buffer (This is optional)</span>
-</span><span class='line'><span class="n">glGenRenderbuffers</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">depthBuffer</span><span class="p">);</span>
-</span><span class='line'><span class="n">glBindRenderbuffer</span><span class="p">(</span><span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">depthBuffer</span><span class="p">);</span>
-</span><span class='line'><span class="n">glRenderbufferStorage</span><span class="p">(</span><span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">GL_DEPTH24_STENCIL8</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">);</span>
-</span><span class='line'><span class="n">glFramebufferRenderbuffer</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="n">GL_DEPTH_ATTACHMENT</span><span class="p">,</span> <span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">depthBuffer</span><span class="p">);</span>
-</span><span class='line'><span class="n">glFramebufferRenderbuffer</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="n">GL_STENCIL_ATTACHMENT</span><span class="p">,</span> <span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">depthBuffer</span><span class="p">);</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// Bind Texture assuming we have created a texture</span>
-</span><span class='line'><span class="n">glFramebufferTexture2D</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="n">GL_COLOR_ATTACHMENT0</span><span class="p">,</span> <span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="n">aTexture</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// Draw something</span>
-</span><span class='line'><span class="n">drawGraphic</span><span class="p">();</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>It is straightforward. First, we create a FBO. After that, we create render buffers and textures and attach them to our FBO.</p>
-
-<h2>Multisampling</h2>
-
-<p>By default, OpenGL does not care about antialiasing. As a result, the output contains stair-like artifacts which degrade visual quality. We have to enable multisampling by the code below.</p>
-
-<figure class='code'><figcaption><span>Enabling multisampling</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">glEanble</span><span class="p">(</span><span class="n">GL_MULTISAMPLE</span><span class="p">);</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Combining Offscreen Rendering and Multisampling Together</h2>
-
-<p>It turns out that to combine them together, we need additional set up which are multisample framebuffer storage and multisample texture. The code below demonstrates how to do.</p>
-
-<figure class='code'><figcaption><span>Setting up FBO with Multisampling</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="c1">// Create multisample texture</span>
-</span><span class='line'><span class="n">glBindTexture</span><span class="p">(</span><span class="n">GL_TEXTURE_2D_MULTISAMPLE</span><span class="p">,</span> <span class="n">aMultisampleTexture</span><span class="p">);</span>
-</span><span class='line'><span class="n">glTexImage2DMultisample</span><span class="p">(</span><span class="n">GL_TEXTURE_2D_MULTISAMPLE</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">GL_RGBA</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">GL_TRUE</span><span class="p">);</span>
-</span><span class='line'>
-</span><span class='line'><span class="kt">int</span> <span class="n">fbo</span><span class="p">,</span> <span class="n">colorBuffer</span><span class="p">,</span> <span class="n">depthBuffer</span><span class="p">;</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// Create and bind the FBO</span>
-</span><span class='line'><span class="n">glGenFramebuffers</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fbo</span><span class="p">);</span>
-</span><span class='line'><span class="n">glBindFramebuffer</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="n">fbo</span><span class="p">);</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// Create color render buffer</span>
-</span><span class='line'><span class="n">glGenRenderbuffers</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">colorBuffer</span><span class="p">);</span>
-</span><span class='line'><span class="n">glBindRenderbuffer</span><span class="p">(</span><span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">colorBuffer</span><span class="p">);</span>
-</span><span class='line'><span class="n">glRenderbufferStorageMultisample</span><span class="p">(</span><span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">GL_RGBA8</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">);</span>
-</span><span class='line'><span class="n">glFramebufferRenderbuffer</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="n">GL_COLOR_ATTACHMENT0</span><span class="p">,</span> <span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">colorBuffer</span><span class="p">);</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// Create depth render buffer (This is optional)</span>
-</span><span class='line'><span class="n">glGenRenderbuffers</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">depthBuffer</span><span class="p">);</span>
-</span><span class='line'><span class="n">glBindRenderbuffer</span><span class="p">(</span><span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">depthBuffer</span><span class="p">);</span>
-</span><span class='line'><span class="n">glRenderbufferStorageMultisample</span><span class="p">(</span><span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">GL_DEPTH24_STENCIL8</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">);</span>
-</span><span class='line'><span class="n">glFramebufferRenderbuffer</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="n">GL_DEPTH_ATTACHMENT</span><span class="p">,</span> <span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">depthBuffer</span><span class="p">);</span>
-</span><span class='line'><span class="n">glFramebufferRenderbuffer</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="n">GL_STENCIL_ATTACHMENT</span><span class="p">,</span> <span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">depthBuffer</span><span class="p">);</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// Bind Texture assuming we have created a texture</span>
-</span><span class='line'><span class="n">glFramebufferTexture2D</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="n">GL_COLOR_ATTACHMENT0</span><span class="p">,</span> <span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="n">aTexture</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// Enable multisampling</span>
-</span><span class='line'><span class="n">glEanble</span><span class="p">(</span><span class="n">GL_MULTISAMPLE</span><span class="p">);</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// Draw something</span>
-</span><span class='line'><span class="n">drawGraphic</span><span class="p">();</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Retrieving the result</h2>
-
-<p>After offscreen rendering, you may want to display the result onto the screen. When you are using multisampling FBO, you are not able to use the result stored in the texture directly. You have to do &ldquo;Blitting&rdquo; which transfer the result from one FBO to another. The code below shows how to do.</p>
-
-<figure class='code'><figcaption><span>Blitting</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">glBindFramebuffer</span><span class="p">(</span><span class="n">GL_READ_FRAMEBUFFER</span><span class="p">,</span> <span class="n">multisampledFBO</span><span class="p">);</span>
-</span><span class='line'><span class="n">glBindFramebuffer</span><span class="p">(</span><span class="n">GL_DRAW_FRAMEBUFFER</span><span class="p">,</span> <span class="n">normalFBO</span><span class="p">);</span> <span class="c1">// Normal FBO can be the default FBO too.</span>
-</span><span class='line'><span class="n">glBlitFramebuffer</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">GL_COLOR_BUFFER_BIT</span><span class="p">,</span> <span class="n">GL_NEAREST</span><span class="p">);</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>I hope these snippets are a useful reference.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/page//page/2/">&larr; Older</a>
@@ -1076,6 +1055,10 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/2014/11/22/memory-mapping-in-kernel-space-on-freebsd/">Memory Mapping in Kernel Space on FreeBSD</a>
+      </li>
+    
+      <li class="post">
         <a href="/2014/11/04/verify-openbsd-install-media-from-os-x/">Verifing OpenBSD Install Media on OS X</a>
       </li>
     
@@ -1089,10 +1072,6 @@
     
       <li class="post">
         <a href="/2013/04/17/building-facebook-home-with-quartz-composer/">Building Facebook Home With Quartz Composer</a>
-      </li>
-    
-      <li class="post">
-        <a href="/2013/04/02/offscreening-and-multisampling-with-opengl/">Offscreen Rendering and Multisampling With OpenGL</a>
       </li>
     
   </ul>

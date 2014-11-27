@@ -4,7 +4,7 @@
   <title><![CDATA[Ake Koomsin]]></title>
   <link href="http://ake.in.th/atom.xml" rel="self"/>
   <link href="http://ake.in.th/"/>
-  <updated>2014-11-22T15:16:10+09:00</updated>
+  <updated>2014-11-27T15:14:34+09:00</updated>
   <id>http://ake.in.th/</id>
   <author>
     <name><![CDATA[Ake Koomsin]]></name>
@@ -89,6 +89,8 @@
 <span class='line-number'>36</span>
 <span class='line-number'>37</span>
 <span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
 </pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">static</span> <span class="kt">int</span>
 </span><span class='line'><span class="nf">example_syscall</span><span class="p">(</span><span class="k">struct</span> <span class="kr">thread</span> <span class="o">*</span><span class="n">td</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span>
 </span><span class='line'><span class="p">{</span>
@@ -123,7 +125,9 @@
 </span><span class='line'>  <span class="k">if</span> <span class="p">(</span><span class="n">error</span><span class="p">)</span> <span class="k">return</span> <span class="p">(</span><span class="n">error</span><span class="p">);</span>
 </span><span class='line'>  <span class="kt">int</span> <span class="n">result</span> <span class="o">=</span> <span class="n">kernacc</span><span class="p">((</span><span class="kt">void</span> <span class="o">*</span><span class="p">)</span><span class="n">addr</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">VM_PROT_EXECUTE</span><span class="p">);</span>
 </span><span class='line'>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;result: %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">result</span><span class="p">);</span>
+</span><span class='line'>  <span class="n">vm_map_lock</span><span class="p">(</span><span class="n">kernel_map</span><span class="p">);</span>
 </span><span class='line'>  <span class="n">vm_map_delete</span><span class="p">(</span><span class="n">kernel_map</span><span class="p">,</span> <span class="n">addr</span><span class="p">,</span> <span class="n">addr</span> <span class="o">+</span> <span class="n">size</span><span class="p">);</span>
+</span><span class='line'>  <span class="n">vm_map_unlock</span><span class="p">(</span><span class="n">kernel_map</span><span class="p">);</span>
 </span><span class='line'>
 </span><span class='line'>  <span class="k">return</span> <span class="p">(</span><span class="mi">0</span><span class="p">);</span>
 </span><span class='line'><span class="p">}</span>

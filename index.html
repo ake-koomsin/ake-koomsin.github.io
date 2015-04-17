@@ -9,8 +9,9 @@
   <meta name="author" content="Ake Koomsin">
 
   
-  <meta name="description" content="When I am working with a kernel module in FreeBSD, there are times that I want to see all functions available in man 9.
-I know that apropos is out &hellip;">
+  <meta name="description" content="Assuming that you are using us.iso.kbd keymap, you can remap CAPSLOCK to CTRL by this simple following steps. First, copy the us.iso.kbd 1
+2
+# cd / &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -65,6 +66,87 @@ I know that apropos is out &hellip;">
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <!-- Now we're back to normal posts. Note the links used under href in both headers.-->
+      <h1 class="entry-title"><a href="/2015/04/17/remap-capslock-to-ctrl-on-freebsd/">Remap CAPSLOCK to CTRL on FreeBSD</a></h1>
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-04-17T15:36:35+09:00" pubdate data-updated="true">Apr 17<span>th</span>, 2015</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Assuming that you are using <code>us.iso.kbd</code> keymap, you can remap CAPSLOCK to CTRL by this simple following steps.</p>
+
+<p>First, copy the <code>us.iso.kbd</code></p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'># cd /usr/share/syscons/keymaps/
+</span><span class='line'># cp us.iso.kbd us.iso-swap.kbd
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Next, modify the permission of <code>us.iso-swap.kbd</code> to be writable.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'># chmod 644 us.iso-swap.kbd
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then, modify <code>us.iso-swap.kbd</code>. Look at the line with number 058 and change &ldquo;clock&rdquo; to &ldquo;lctrl&rdquo; like this.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>...
+</span><span class='line'>058   lctrl  lctrl  lctrl  lctrl  lctrl  lctrl  lctrl  lctrl   O
+</span><span class='line'>...
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>After that, change the permission back to read-only</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'># chmod 444 us.iso-swap.kbd
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Finally, add this text to <code>/etc/rc.conf</code></p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>keymap=&quot;us.iso-swap&quot;
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Reboot and now your CAPLOCKS will be CTRL.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -908,44 +990,6 @@ I know that <code>apropos</code> is out there but I sometimes don&rsquo;t know t
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <!-- This defines how Octopress will use posts with external-url. -->
-        <h1 class="entry-title"><a href="https://vimeo.com/user5164093/videos">Building Facebook Home With Quartz Composer &rarr;</a></h1>
-      
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-04-17T11:37:00+09:00" pubdate data-updated="true">Apr 17<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>David O Brien has produced a tutorial on using Quartz Composer to emulate Facebook Home. It is worth watching. Quartz Composer, to me, is another hidden gem that Apple provides for developers.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/page//page/2/">&larr; Older</a>
@@ -961,6 +1005,10 @@ I know that <code>apropos</code> is out there but I sometimes don&rsquo;t know t
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/2015/04/17/remap-capslock-to-ctrl-on-freebsd/">Remap CAPSLOCK to CTRL on FreeBSD</a>
+      </li>
+    
+      <li class="post">
         <a href="/2015/02/04/seeing-all-pages-available-in-section-9-on-freebsd/">Seeing All Man Pages Available in a Section on FreeBSD</a>
       </li>
     
@@ -974,10 +1022,6 @@ I know that <code>apropos</code> is out there but I sometimes don&rsquo;t know t
     
       <li class="post">
         <a href="/2013/09/20/thought-on-learning-kanji-with-remembering-the-kanji/">Thought on Learning Kanji With Remembering the Kanji</a>
-      </li>
-    
-      <li class="post">
-        <a href="/2013/04/17/building-facebook-home-with-quartz-composer/">Building Facebook Home With Quartz Composer</a>
       </li>
     
   </ul>

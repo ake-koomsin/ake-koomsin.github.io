@@ -9,7 +9,7 @@
   <meta name="author" content="Ake Koomsin">
 
   
-  <meta name="description" content="It has been for a while since my last post. I was enjoying with my senior project, &ldquo;Accelerating Map Rendering with GPU&rdquo;. In this project &hellip;">
+  <meta name="description" content="David O Brien has produced a tutorial on using Quartz Composer to emulate Facebook Home. It is worth watching. Quartz Composer, to me, is another &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -64,6 +64,44 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <!-- This defines how Octopress will use posts with external-url. -->
+        <h1 class="entry-title"><a href="https://vimeo.com/user5164093/videos">Building Facebook Home With Quartz Composer &rarr;</a></h1>
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-04-17T11:37:00+09:00" pubdate data-updated="true">Apr 17<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>David O Brien has produced a tutorial on using Quartz Composer to emulate Facebook Home. It is worth watching. Quartz Composer, to me, is another hidden gem that Apple provides for developers.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -612,75 +650,6 @@
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <!-- Now we're back to normal posts. Note the links used under href in both headers.-->
-      <h1 class="entry-title"><a href="/2012/01/04/using-date-command-in-cron-job/">Using Date Command in Cron Job</a></h1>
-      
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2012-01-04T21:26:00+09:00" pubdate data-updated="true">Jan 4<span>th</span>, 2012</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>I had to set a cron job to back up mysql database and its format I wanted is like this</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>back_up_YYYY_MM_DD.sql</span></code></pre></td></tr></table></div></figure>
-
-
-<p>And here was my first initial configuration that I added to <code>/etc/crontab</code></p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'>00 11   * * *   a_user   mysqldump -u root -pSomePass db &gt; /home/a_user/www/sql_backup/back_up_<span class="sb">`</span>date +%Y_%d_%m<span class="sb">`</span>.sql
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Actually, I noticed a strange syntax color at the end of the line in Vim. I thought it is just misparsing so that I ommited it.</p>
-
-<p>And here was the output in <code>/var/log/syslog</code></p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'>Jan  4 11:00:01 a_user CRON<span class="o">[</span>3427<span class="o">]</span>: <span class="o">(</span>a_user<span class="o">)</span> CMD <span class="o">(</span>  mysqldump -u root -pSomePass db &gt; /home/a_user/www/sql_backup/back_up_<span class="sb">`</span>date +<span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Something was wrong as you can see; it was not complete.</p>
-
-<p>In order to fix this, I had to escape the &lsquo;%&rsquo; sign</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'>00 11   * * *   a_user   mysqldump -u root -pSomePass db &gt; /home/gizmo/www/sql_backup/back_up_<span class="sb">`</span>date +<span class="se">\%</span>Y_<span class="se">\%</span>d_<span class="se">\%</span>m<span class="sb">`</span>.sql
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Now, everything works fine :D</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/page//page/3/">&larr; Older</a>
@@ -698,6 +667,10 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/2015/04/17/remap-capslock-to-ctrl-on-freebsd/">Remap CAPSLOCK to CTRL on FreeBSD</a>
+      </li>
+    
+      <li class="post">
         <a href="/2015/02/04/seeing-all-pages-available-in-section-9-on-freebsd/">Seeing All Man Pages Available in a Section on FreeBSD</a>
       </li>
     
@@ -711,10 +684,6 @@
     
       <li class="post">
         <a href="/2013/09/20/thought-on-learning-kanji-with-remembering-the-kanji/">Thought on Learning Kanji With Remembering the Kanji</a>
-      </li>
-    
-      <li class="post">
-        <a href="/2013/04/17/building-facebook-home-with-quartz-composer/">Building Facebook Home With Quartz Composer</a>
       </li>
     
   </ul>

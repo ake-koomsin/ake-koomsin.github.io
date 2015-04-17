@@ -4,7 +4,7 @@
   <title><![CDATA[Ake Koomsin]]></title>
   <link href="http://ake.in.th/atom.xml" rel="self"/>
   <link href="http://ake.in.th/"/>
-  <updated>2015-04-01T21:04:45+09:00</updated>
+  <updated>2015-04-17T15:49:03+09:00</updated>
   <id>http://ake.in.th/</id>
   <author>
     <name><![CDATA[Ake Koomsin]]></name>
@@ -12,6 +12,58 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Remap CAPSLOCK to CTRL on FreeBSD]]></title>
+    <link href="http://ake.in.th/2015/04/17/remap-capslock-to-ctrl-on-freebsd/"/>
+    <updated>2015-04-17T15:36:35+09:00</updated>
+    <id>http://ake.in.th/2015/04/17/remap-capslock-to-ctrl-on-freebsd</id>
+    <content type="html"><![CDATA[<p>Assuming that you are using <code>us.iso.kbd</code> keymap, you can remap CAPSLOCK to CTRL by this simple following steps.</p>
+
+<p>First, copy the <code>us.iso.kbd</code></p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'># cd /usr/share/syscons/keymaps/
+</span><span class='line'># cp us.iso.kbd us.iso-swap.kbd
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Next, modify the permission of <code>us.iso-swap.kbd</code> to be writable.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'># chmod 644 us.iso-swap.kbd
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then, modify <code>us.iso-swap.kbd</code>. Look at the line with number 058 and change &ldquo;clock&rdquo; to &ldquo;lctrl&rdquo; like this.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>...
+</span><span class='line'>058   lctrl  lctrl  lctrl  lctrl  lctrl  lctrl  lctrl  lctrl   O
+</span><span class='line'>...
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>After that, change the permission back to read-only</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'># chmod 444 us.iso-swap.kbd
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Finally, add this text to <code>/etc/rc.conf</code></p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>keymap=&quot;us.iso-swap&quot;
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Reboot and now your CAPLOCKS will be CTRL.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Seeing All Man Pages Available in a Section on FreeBSD]]></title>

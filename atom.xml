@@ -4,7 +4,7 @@
   <title><![CDATA[Ake Koomsin]]></title>
   <link href="http://ake.in.th/atom.xml" rel="self"/>
   <link href="http://ake.in.th/"/>
-  <updated>2015-04-17T15:49:03+09:00</updated>
+  <updated>2015-06-06T01:35:23+09:00</updated>
   <id>http://ake.in.th/</id>
   <author>
     <name><![CDATA[Ake Koomsin]]></name>
@@ -12,6 +12,44 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[SSH to a Computer Inside an Internal Network]]></title>
+    <link href="http://ake.in.th/2015/06/06/ssh-to-a-computer-inside-an-interal-network/"/>
+    <updated>2015-06-06T00:56:36+09:00</updated>
+    <id>http://ake.in.th/2015/06/06/ssh-to-a-computer-inside-an-interal-network</id>
+    <content type="html"><![CDATA[<p>There are times that I want to access to my computer in my laboratory
+remotely. However, it is inside the lab&rsquo;s internal network. Luckily,
+There is a gateway that I make a ssh connection to. The simplified
+scenario is shown below.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>|---------|      |-------|      |-----------|
+</span><span class='line'>|my laptop|------|gateway|------|my computer|
+</span><span class='line'>|---------|      |-------|      |-----------|</span></code></pre></td></tr></table></div></figure>
+
+
+<p>To access my computer in the internal network, I can create a tunnel
+by running this command on my laptop:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>ssh -L PORT:MY_COMPUTER_INTERNAL_IP:22 gateway -lUSER_TO_LOGIN_ON_THE_GATEWAY -N</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This command will create a tunnel that will forward the local port PORT to my
+computer port 22 (SSH). <code>-N</code> is for not executing a remote command.</p>
+
+<p>After that, I can simply ssh to my computer using the following command:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>ssh -lUSER_TO_LOGIN_ON_MY_COMPUTER -pPORT localhost</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And that&rsquo;s all.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Remap CAPSLOCK to CTRL on FreeBSD]]></title>

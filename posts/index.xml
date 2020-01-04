@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Posts on Ake&#39;s Blog</title>
+    <link>https://ake.in.th/posts/</link>
+    <description>Recent content in Posts on Ake&#39;s Blog</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sat, 09 Jan 2016 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="https://ake.in.th/posts/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>TIL There is a tool named diffstat</title>
+      <link>https://ake.in.th/posts/til-there-is-a-tool-named-diffstat/</link>
+      <pubDate>Sat, 09 Jan 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://ake.in.th/posts/til-there-is-a-tool-named-diffstat/</guid>
+      <description>&lt;p&gt;Right now I am working on my thesis which is &amp;ldquo;Specializing Operating System Kernels using a Scripting Language&amp;rdquo;.
+A part of my work is porting the LuaJIT compiler into the FreeBSD x86 kernel.&lt;/p&gt;
+&lt;p&gt;When I was writing my thesis, I was asked to show modification information in the thesis.
+They are number of lines added, numbers of lines removed, number of lines changed.
+I know that &lt;code&gt;diff&lt;/code&gt; exists. However, I need a summary of information produced by it.&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Ssh to a computer inside an internal network</title>
+      <link>https://ake.in.th/posts/ssh-to-a-computer-inside-an-internal-network/</link>
+      <pubDate>Sat, 06 Jun 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://ake.in.th/posts/ssh-to-a-computer-inside-an-internal-network/</guid>
+      <description>&lt;p&gt;There are times that I want to access to my computer in my laboratory
+remotely. However, it is inside the lab&#39;s internal network. Luckily,
+There is a gateway that I make a ssh connection to. The simplified
+scenario is shown below.&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Remap capslock to ctrl on FreeBSD</title>
+      <link>https://ake.in.th/posts/remap-capslock-to-ctrl-on-freebsd/</link>
+      <pubDate>Fri, 17 Apr 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://ake.in.th/posts/remap-capslock-to-ctrl-on-freebsd/</guid>
+      <description>&lt;p&gt;Assuming that you are using &lt;code&gt;us.iso.kbd&lt;/code&gt; keymap, you can remap CAPSLOCK to CTRL by this simple following steps.&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Seeing all pages available in section 9 on FreeBSD</title>
+      <link>https://ake.in.th/posts/seeing-all-pages-available-in-section-9-on-freebsd/</link>
+      <pubDate>Wed, 04 Feb 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://ake.in.th/posts/seeing-all-pages-available-in-section-9-on-freebsd/</guid>
+      <description>&lt;p&gt;When I am working with a kernel module in FreeBSD, there are times that I want to see all functions available in &lt;code&gt;man 9&lt;/code&gt;.
+I know that &lt;code&gt;apropos&lt;/code&gt; is out there but I sometimes don&#39;t know the keyword.&lt;/p&gt;
+&lt;p&gt;Because of this, I decided to write a simple zsh script to list all available pages in a section, not only in section 9.&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Verify OpenBSD install media from OS X</title>
+      <link>https://ake.in.th/posts/verify-openbsd-install-media-from-os-x/</link>
+      <pubDate>Tue, 04 Nov 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://ake.in.th/posts/verify-openbsd-install-media-from-os-x/</guid>
+      <description>&lt;p&gt;New &lt;a href=&#34;http://www.openbsd.org/56.html&#34;&gt;OpenBSD 5.6&lt;/a&gt; has been released. It is time to give it a try.&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Digging around FreeBSD socket API tcp_send_path</title>
+      <link>https://ake.in.th/posts/digging-around-freebsd-socket-api-tcp-send-path/</link>
+      <pubDate>Fri, 04 Jul 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://ake.in.th/posts/digging-around-freebsd-socket-api-tcp-send-path/</guid>
+      <description>When we want to send data across network, it involves either
+ write()/writev() send()/sendto()/sendmsg()  and sockets.
+To use write(), writev() and send(), the socket must be connected. On the other hand sendto() and sendmsg() can be used in both connected and unconnected connection.
+We normally can find the implementation of system calls in the kernel by adding ‘sys_’ prefix to the name of the system call except send(). In FreeBSD libc, send() is just a wrapper of sendto() with some default parameters.</description>
+    </item>
+    
+    <item>
+      <title>Thought on learning kanji with Remembering The Kanji</title>
+      <link>https://ake.in.th/posts/thought-on-learning-kanji-with-remembering-the-kanji/</link>
+      <pubDate>Fri, 20 Sep 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://ake.in.th/posts/thought-on-learning-kanji-with-remembering-the-kanji/</guid>
+      <description>First of all, I would like to apologize that I haven&#39;t updated this blog for a very long time. After I graduated in March, I took a little break and started a full-time job on April. I worked on a lot of interesting projects. I cannot share what I worked on because I feel like it is a company secret. In May, I got a notification of acceptance from the</description>
+    </item>
+    
+    <item>
+      <title>Building Facebook home with Quartz Composer</title>
+      <link>https://ake.in.th/posts/building-facebook-home-with-quartz-composer/</link>
+      <pubDate>Wed, 17 Apr 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://ake.in.th/posts/building-facebook-home-with-quartz-composer/</guid>
+      <description>David O Brien has produced a tutorial on using Quartz Composer to emulate Facebook Home. It is worth watching. Quartz Composer, to me, is another hidden gem that Apple provides for developers.</description>
+    </item>
+    
+    <item>
+      <title>Offscreening and multisampling with OpenGL</title>
+      <link>https://ake.in.th/posts/offscreening-and-multisampling-with-opengl/</link>
+      <pubDate>Tue, 02 Apr 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://ake.in.th/posts/offscreening-and-multisampling-with-opengl/</guid>
+      <description>It has been for a while since my last post. I was enjoying with my senior project, &amp;ldquo;Accelerating Map Rendering with GPU&amp;rdquo;. In this project, my friend and I modified Mapnik, an opensource map rendering, to utilize Nvidia&#39;s Path Rendering. Path Rendering is an OpenGL extension provided by Nvidia for vector graphic rendering. Nvidia claims that its extensions aims to reduce overhead from traditional APIs when using them to draw vector graphics.</description>
+    </item>
+    
+    <item>
+      <title>My first kernel extension for Logitech presenter device</title>
+      <link>https://ake.in.th/posts/my-first-kernel-extension-for-logitech-presenter-device/</link>
+      <pubDate>Sat, 17 Nov 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://ake.in.th/posts/my-first-kernel-extension-for-logitech-presenter-device/</guid>
+      <description>I do a lot of presentation particularly those class projects. To make my presentation looks more professional, I decide to buy Logitech Professional Presenter R800. It is very nice. I recommend you to have one if you have to give a lot of presentation.
+However, what bothers me is that not all buttons work with Apple Keynote, particularly Play button and Blank button. Well, the device is designed for Microsoft PowerPoint on Windows.</description>
+    </item>
+    
+    <item>
+      <title>Thought on writing a report with Latex</title>
+      <link>https://ake.in.th/posts/thought-on-writing-a-report-with-latex/</link>
+      <pubDate>Wed, 11 Apr 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://ake.in.th/posts/thought-on-writing-a-report-with-latex/</guid>
+      <description>I&#39;m not dead!
+I haven&#39;t update my blog for a month becasue I really have no time. I had to study from 8:40 to 17:20 every day due to the great flood. Agh! I hate school time.
+I just finished my final exams yesterday. I feel really great now, just like getting out of the jail.
+Let&#39;s come back to the story about Latex.
+I had to write a software architecture document as an assignment.</description>
+    </item>
+    
+    <item>
+      <title>Install outguess on OS X Lion with Homebrew</title>
+      <link>https://ake.in.th/posts/install-outguess-on-os-x-lion-with-homebrew/</link>
+      <pubDate>Sat, 21 Jan 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://ake.in.th/posts/install-outguess-on-os-x-lion-with-homebrew/</guid>
+      <description>In my security and cryptography class, My teacher showed me an interesting program called outguess. What it does it hide a plain text into a jpg file. This method is known as steganography.
+The program will read an input text file and slightly change pixels color in the image in such the way that it is not going to be visible.
+Here is an example of putting some text into an image:</description>
+    </item>
+    
+    <item>
+      <title>Using date command in cron job</title>
+      <link>https://ake.in.th/posts/using-date-command-in-cron-job/</link>
+      <pubDate>Wed, 04 Jan 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://ake.in.th/posts/using-date-command-in-cron-job/</guid>
+      <description>&lt;p&gt;I had to set a cron job to back up mysql database and its format I wanted is like this&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Getting Zyxel NWD-270N works on Ubuntu 10.04 LTS</title>
+      <link>https://ake.in.th/posts/getting-zyxel-nwd-270n-works-on-ubuntu-10-dot-04-lts/</link>
+      <pubDate>Mon, 02 Jan 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://ake.in.th/posts/getting-zyxel-nwd-270n-works-on-ubuntu-10-dot-04-lts/</guid>
+      <description>I have to install Ubuntu 10.04 LTS on a machine as a sales terminal which will run Ruby on Rails. The problem that I encounter is Zyxel NWD-270N, a wireless adaptor. At the first glance, it looks like it should work out of box. Zyxel NWD-270N supposes to use rt2870sta driver.
+Unfortunately, there seems to be something wrong with Ubuntu 10.04 LTS that tries to load rt2800usb and it does not work.</description>
+    </item>
+    
+    <item>
+      <title>Greeting</title>
+      <link>https://ake.in.th/posts/greeting/</link>
+      <pubDate>Sun, 01 Jan 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://ake.in.th/posts/greeting/</guid>
+      <description>It is a very good time to launch this blog on New Year.
+I aim to post everything I learned from school and work as a technical journey. I hope that it might be useful for readers and me someday in the future.
+Everything is like a dot. In order to understand things around, it is important to find the way to connect those dots. It is good to have a variety of knowledge and skills.</description>
+    </item>
+    
+  </channel>
+</rss>
